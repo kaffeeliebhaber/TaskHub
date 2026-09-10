@@ -1,3 +1,4 @@
+import type { FocusSession, FocusNote } from "./focus";
 export interface Project {
   id: string;
   name: string;
@@ -25,7 +26,23 @@ export interface Checklist {
   collapsed: boolean;
   items: ChecklistItem[];
 }
+export const priorities = [
+  "none",
+  "low",
+  "medium",
+  "high",
+  "critical",
+] as const;
+export type Priority = (typeof priorities)[number];
+export const priorityNames: Record<Priority, string> = {
+  none: "Keine",
+  low: "Niedrig",
+  medium: "Mittel",
+  high: "Hoch",
+  critical: "Kritisch",
+};
 export interface Task {
+  priority?: Priority;
   checklist?: Checklist | null;
   id: string;
   columnId: string;
@@ -36,6 +53,9 @@ export interface Task {
   updatedAt: string;
 }
 export interface Workspace {
+  sidebarCollapsed?: boolean;
+  focus?: FocusSession | null;
+  focusNotes?: FocusNote[];
   revision: number;
   projects: Project[];
   boards: Board[];
@@ -154,6 +174,45 @@ export function removeProject(s: Workspace, projectId: string) {
     s.activeProjectId = s.projects[0]?.id ?? null;
 }
 export function validate(s: Workspace) {
+  if (
+    s.sidebarCollapsed !== undefined &&
+    typeof s.sidebarCollapsed !== "boolean"
+  )
+    throw new Error("Ungültige Darstellungseinstellung.");
+  const f = s.focus;
+  if (
+    f &&
+    (!f.id ||
+      !["running", "paused", "completed", "stopped"].includes(f.status) ||
+      !Number.isSafeInteger(f.durationMs) ||
+      f.durationMs < 60000 ||
+      f.durationMs > 14400000 ||
+      !Number.isSafeInteger(f.remainingMs) ||
+      f.remainingMs < 0 ||
+      f.remainingMs > f.durationMs ||
+      (f.status === "running"
+        ? !Number.isSafeInteger(f.endAt) || f.endAt! <= 0
+        : f.endAt !== null) ||
+      (f.status === "completed" && f.remainingMs !== 0) ||
+      (f.taskId !== null && !s.tasks.some((t) => t.id === f.taskId)))
+  )
+    throw new Error("Ungültige Focus-Zeit.");
+  const notes = s.focusNotes ?? [];
+  if (
+    new Set(notes.map((n) => n.id)).size !== notes.length ||
+    notes.some(
+      (n) =>
+        !n.id ||
+        !n.sessionId ||
+        !n.text.trim() ||
+        n.text.length > 10000 ||
+        !Number.isFinite(Date.parse(n.createdAt)) ||
+        (n.taskId !== null && !s.tasks.some((t) => t.id === n.taskId)),
+    )
+  )
+    throw new Error("Ungültige Focus-Notiz.");
+  if (s.tasks.some((t) => !priorities.includes(t.priority ?? "none")))
+    throw new Error("Ungültige Priorität.");
   for (const task of s.tasks) {
     const list = task.checklist;
     if (
@@ -226,4 +285,25 @@ export function editChecklist(task: Task, edit: (list: Checklist) => void) {
   task.checklist ??= { title: "Checkliste", collapsed: false, items: [] };
   edit(task.checklist);
   task.updatedAt = new Date().toISOString();
+}
+
+export function matchesTask(
+  task: Task,
+  query: string,
+  priority: Priority | "all",
+  notes: FocusNote[] = [],
+) {
+  const text = [
+    task.title,
+    task.description,
+    task.checklist?.title ?? "",
+    ...(task.checklist?.items.map((i) => i.text) ?? []),
+    ...notes.filter((n) => n.taskId === task.id).map((n) => n.text),
+  ]
+    .join(" ")
+    .toLocaleLowerCase("de");
+  return (
+    (priority === "all" || (task.priority ?? "none") === priority) &&
+    text.includes(query.trim().toLocaleLowerCase("de"))
+  );
 }

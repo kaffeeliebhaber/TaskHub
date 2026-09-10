@@ -1,3 +1,4 @@
+import { detachDeletedTasks } from "../domain/focus";
 import { emptyWorkspace, validate, type Workspace } from "../domain/model";
 import { type WorkspaceRepository } from "./repository";
 export class WorkspaceStore {
@@ -40,6 +41,7 @@ export class WorkspaceStore {
         if (this.state.error) throw new Error(this.state.error);
         const next = structuredClone(this.state.workspace);
         edit(next);
+        detachDeletedTasks(next);
         validate(next);
         next.revision = await this.repository.save(next);
         this.emit({ workspace: next });

@@ -41,3 +41,9 @@ Spalten verwenden HTML5-Drag-and-Drop; Karten verwenden Pointer Capture mit sich
 `TaskCard.tsx` kapselt Pointer Capture, Drag-Vorschau und Klickverhalten. Die Vorschau wird per React-Portal an den Body gehängt, damit Spalten sie nicht abschneiden; sie ignoriert Zeigereingaben. Die Position verwendet den tatsächlichen Griffpunkt statt die Karte am Cursor zu zentrieren. Aufgabenzuordnung wird erst beim Loslassen geändert; Escape, Pointer-Abbruch und Fenster-Fokusverlust verwerfen den Drag.
 
 `Checklist.tsx` kapselt die erste Liste je Task. Fachliche Daten (Einträge, Titel) und Anzeigezustand (collapsed) werden über dieselbe Speicherwarteschlange persistiert. Für diese erste Ausbaustufe speichert Migration 2 ein optionales, typisiertes JSON-Objekt in `tasks.checklist`; bestehende Datensätze erhalten NULL. Rust prüft Einträge, eindeutige IDs und Größenlimits. Bei Mehrfachlisten und eigener Eintrags-Sortierung in einem späteren Schritt zu eigenen Kindtabellen migrieren. Die vorhandene Domain-Schnittstelle kann dann beibehalten werden.
+
+## Focus und Prioritäten
+
+`domain/focus.ts` enthält die unabhängig testbare Zeit- und Notizlogik. `useFocus` aktualisiert nur die Anzeige; ein gespeicherter Endzeitpunkt vermeidet Drift durch pausierte Browsertabs. Alle dauerhaften Änderungen laufen durch die bestehende Speicherwarteschlange. Eine Sitzung kann ohne Task bestehen; beim Löschen eines Tasks werden ihre Referenzen gelöst und der frühere Titel bleibt erhalten. Notizen sind eigenständige Datensätze und bleiben über neue Sitzungen hinweg erhalten.
+
+Migration 3 ergänzt `tasks.priority`, die Seitenleisten-Einstellung, einen typisierten JSON-Sitzungszustand in den Metadaten und die Tabelle `focus_notes`. Vor einer bestehenden Datenbankmigration wird mit SQLite `VACUUM INTO` eine konsistente Sicherung erstellt. Browser-Vorschau und Desktop behalten getrennte Repository-Adapter.

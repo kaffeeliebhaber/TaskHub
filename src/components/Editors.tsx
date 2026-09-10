@@ -1,5 +1,13 @@
+import type { FocusNote } from "../domain/focus";
+import { FocusNotes } from "./FocusNotes";
 import { useRef, useState, type FormEvent } from "react";
-import type { Column, Task } from "../domain/model";
+import {
+  priorities,
+  priorityNames,
+  type Priority,
+  type Column,
+  type Task,
+} from "../domain/model";
 import { Dialog } from "./Dialog";
 export function NameDialog({
   title,
@@ -100,24 +108,28 @@ export function TaskInput({
 }
 export function TaskEditor({
   task,
+  notes,
   columns,
   close,
   save,
   remove,
 }: {
   task: Task;
+  notes: FocusNote[];
   columns: Column[];
   close: () => void;
   save: (
     title: string,
     description: string,
     columnId: string,
+    priority: Priority,
   ) => Promise<boolean>;
   remove: () => void;
 }) {
   const [title, setTitle] = useState(task.title),
     [description, setDescription] = useState(task.description),
     [columnId, setColumnId] = useState(task.columnId),
+    [priority, setPriority] = useState<Priority>(task.priority ?? "none"),
     [busy, setBusy] = useState(false),
     [error, setError] = useState("");
   return (
@@ -126,7 +138,8 @@ export function TaskEditor({
         onSubmit={async (e) => {
           e.preventDefault();
           setBusy(true);
-          if (await save(title.trim(), description, columnId)) close();
+          if (await save(title.trim(), description, columnId, priority))
+            close();
           else
             setError(
               "Änderung nicht gespeichert. Deine Eingabe bleibt hier erhalten.",
@@ -167,6 +180,21 @@ export function TaskEditor({
             ))}
           </select>
         </label>
+        <label>
+          Priorität
+          <select
+            aria-label="Priorität der Aufgabe"
+            value={priority}
+            onChange={(e) => setPriority(e.target.value as Priority)}
+          >
+            {priorities.map((p) => (
+              <option key={p} value={p}>
+                {priorityNames[p]}
+              </option>
+            ))}
+          </select>
+        </label>
+        <FocusNotes notes={notes} />
         <p className="muted">
           Erstellt am {new Date(task.createdAt).toLocaleDateString("de-DE")}
         </p>

@@ -1,3 +1,9 @@
+import { Sidebar } from "./components/Sidebar";
+import { PriorityFilter, PriorityBadge } from "./components/Priority";
+import { FocusButton, FocusTimer } from "./components/FocusTimer";
+import { useFocus } from "./hooks/useFocus";
+import { notesForTask } from "./domain/focus";
+import { matchesTask, type Priority } from "./domain/model";
 import { TaskCard, DragAvatar, type DragPreview } from "./components/TaskCard";
 import { editChecklist } from "./domain/model";
 import {
@@ -63,6 +69,8 @@ export function App() {
   } = useSyncExternalStore(store.subscribe, store.snapshot);
   const [page, setPage] = useState<"board" | "projects" | "search">("board");
   const [query, setQuery] = useState("");
+  const [priorityFilter, setPriorityFilter] = useState<Priority | "all">("all");
+  const focus = useFocus(s, store.change, error);
   const [modal, setModal] = useState<Modal>(null);
   const [path, setPath] = useState("");
   const [adding, setAdding] = useState<string | null>(null);
@@ -94,6 +102,7 @@ export function App() {
     });
     setPage("board");
     setQuery("");
+    setPriorityFilter("all");
     setAdding(null);
   };
   const nameDialog = (
@@ -119,9 +128,8 @@ export function App() {
     edit: (w: Workspace) => void,
   ) => setModal({ kind: "delete", title, message, submit: () => change(edit) });
   const matches = (t: Task) =>
-    `${t.title} ${t.description}`
-      .toLocaleLowerCase("de")
-      .includes(query.toLocaleLowerCase("de"));
+    matchesTask(t, query, priorityFilter, s.focusNotes);
+  const filtering = !!query.trim() || priorityFilter !== "all";
   const boardTasks = s.tasks.filter((t) =>
     columns.some((c) => c.id === t.columnId),
   );
@@ -138,80 +146,27 @@ export function App() {
   return (
     <div className={`shell ${dragPreview ? "is-dragging" : ""}`}>
       <DragAvatar preview={dragPreview} />
-      <aside className="sidebar">
-        <div className="brand">
-          <span className="brand-mark">
-            <Columns3 size={20} />
-          </span>
-          TaskHub<span className="version">0.1</span>
-        </div>
-        <div className="workspace-label">DEIN ARBEITSPLATZ</div>
-        <nav aria-label="Hauptnavigation">
-          <button
-            className={page === "projects" ? "nav active" : "nav"}
-            onClick={() => {
-              setPage("projects");
-              setQuery("");
-            }}
-          >
-            <LayoutGrid size={17} />
-            Projekte
-          </button>
-          <button
-            className={page === "search" ? "nav active" : "nav"}
-            onClick={() => {
-              setPage("search");
-              setQuery("");
-            }}
-          >
-            <Search size={17} />
-            Suche
-          </button>
-        </nav>
-        <div className="section-label">
-          <span>
-            Projekte <small>{s.projects.length}</small>
-          </span>
-          <button aria-label="Neues Projekt" onClick={newProject}>
-            <Plus size={16} />
-          </button>
-        </div>
-        <nav className="project-list" aria-label="Projekte">
-          {s.projects.map((p, i) => (
-            <button
-              className={
-                p.id === project?.id && page === "board"
-                  ? "nav active project"
-                  : "nav project"
-              }
-              key={p.id}
-              onClick={() => openProject(p.id)}
-            >
-              <span className={`project-dot color-${i % 4}`} />
-              <span>{p.name}</span>
-            </button>
-          ))}
-        </nav>
-        <div className="sidebar-bottom">
-          <div className="local-status">
-            <span className="status-dot" />
-            {repository.preview ? "Browser-Vorschau" : "Lokal auf deinem Gerät"}
-          </div>
-          <button
-            className="nav"
-            onClick={() => setModal({ kind: "settings" })}
-          >
-            <Settings size={17} />
-            Einstellungen
-          </button>
-          <div className="profile">
-            <span>S</span>
-            <div>
-              Mein Arbeitsplatz<small>Alles an einem Ort.</small>
-            </div>
-          </div>
-        </div>
-      </aside>
+      <Sidebar
+        collapsed={!!s.sidebarCollapsed}
+        toggle={() =>
+          void change((w) => {
+            w.sidebarCollapsed = !w.sidebarCollapsed;
+          })
+        }
+        projects={s.projects}
+        activeId={project?.id}
+        page={page}
+        navigate={(page) => {
+          setPage(page);
+          setQuery("");
+          setPriorityFilter("all");
+        }}
+        openProject={openProject}
+        newProject={newProject}
+        settings={() => setModal({ kind: "settings" })}
+        preview={repository.preview}
+      />
+
       <main>
         <div className="topbar">
           <span>
@@ -304,6 +259,7 @@ export function App() {
                   </details>
                 )}
                 <div className="spacer" />
+                <FocusButton controller={focus} workspace={s} />
                 <button
                   className="primary"
                   disabled={!!error || loading}
@@ -312,6 +268,7 @@ export function App() {
                       ? () => {
                           setAdding(columns[0].id);
                           setQuery("");
+                          setPriorityFilter("all");
                         }
                       : newProject
                   }
@@ -353,6 +310,21 @@ export function App() {
                       </button>
                     )}
                   </div>
+                  <PriorityFilter
+                    value={priorityFilter}
+                    onChange={setPriorityFilter}
+                  />
+                  {filtering && (
+                    <button
+                      className="clear-filters"
+                      onClick={() => {
+                        setQuery("");
+                        setPriorityFilter("all");
+                      }}
+                    >
+                      Zurücksetzen
+                    </button>
+                  )}
                   <span className="column-total">
                     {columns.length} / 15 Spalten
                   </span>
@@ -382,7 +354,7 @@ export function App() {
                       >
                         <header
                           className="column-header"
-                          draggable={!query}
+                          draggable={!filtering}
                           onDragStart={(e) => {
                             drag.current = { kind: "column", id: c.id };
                             e.dataTransfer.setData("text/plain", c.id);
@@ -502,9 +474,20 @@ export function App() {
                                 <TaskCard
                                   key={t.id}
                                   task={t}
-                                  disabled={!!query}
+                                  disabled={filtering}
                                   drop={drop}
                                   preview={dragPreview}
+                                  onFocus={focus.selectTask}
+                                  notes={notesForTask(s.focusNotes, t)}
+                                  onPriority={(priority) =>
+                                    change((w) => {
+                                      const task = w.tasks.find(
+                                        (x) => x.id === t.id,
+                                      )!;
+                                      task.priority = priority;
+                                      task.updatedAt = new Date().toISOString();
+                                    })
+                                  }
                                   onPreview={setDragPreview}
                                   onHover={setDrop}
                                   onMove={(columnId, beforeId) =>
@@ -593,8 +576,8 @@ export function App() {
                   </button>
                 </div>
                 <footer className="board-footer">
-                  {query
-                    ? "Suchergebnisse · zum Sortieren die Suche leeren"
+                  {filtering
+                    ? "Gefilterte Ansicht · zum Sortieren Filter zurücksetzen"
                     : "Karten und Spalten ziehen, um sie zu verschieben."}
                   <span>Dein Tempo. Dein System.</span>
                 </footer>
@@ -611,7 +594,23 @@ export function App() {
                     onChange={(e) => setQuery(e.target.value)}
                   />
                 </div>
-                {query ? (
+                <div className="global-search-filters">
+                  <PriorityFilter
+                    value={priorityFilter}
+                    onChange={setPriorityFilter}
+                  />
+                  {filtering && (
+                    <button
+                      onClick={() => {
+                        setQuery("");
+                        setPriorityFilter("all");
+                      }}
+                    >
+                      Suche und Filter zurücksetzen
+                    </button>
+                  )}
+                </div>
+                {filtering ? (
                   s.tasks.filter(matches).map((t) => {
                     const b = s.boards.find(
                       (b) =>
@@ -631,6 +630,7 @@ export function App() {
                         <span>
                           {t.title}
                           <small>{p?.name}</small>
+                          <PriorityBadge priority={t.priority} />
                         </span>
                         <ArrowUpRight size={18} />
                       </button>
@@ -641,7 +641,7 @@ export function App() {
                     Suche nach einem Titel oder einem Wort aus der Beschreibung.
                   </p>
                 )}
-                {query && !s.tasks.some(matches) && (
+                {filtering && !s.tasks.some(matches) && (
                   <p>Keine Aufgaben gefunden.</p>
                 )}
               </div>
@@ -694,6 +694,15 @@ export function App() {
           </>
         )}
       </main>
+      <FocusTimer
+        controller={focus}
+        workspace={s}
+        boardTasks={boardTasks}
+        change={change}
+        error={error}
+        pending={pending}
+        drop={drop}
+      />
       {modal?.kind === "name" && (
         <NameDialog
           key={modal.title + modal.initial}
@@ -733,11 +742,13 @@ export function App() {
           task={s.tasks.find((t) => t.id === modal.task.id) ?? modal.task}
           columns={columns}
           close={() => setModal(null)}
-          save={(title, description, columnId) =>
+          notes={notesForTask(s.focusNotes, modal.task)}
+          save={(title, description, columnId, priority) =>
             change((w) => {
               const t = w.tasks.find((t) => t.id === modal.task.id)!;
               t.title = title;
               t.description = description;
+              t.priority = priority;
               t.updatedAt = new Date().toISOString();
               if (t.columnId !== columnId) moveTask(w, t.id, columnId);
             })
@@ -766,10 +777,11 @@ export function App() {
             <code>{path}</code>
           </div>
           <div className="settings-section">
-            <h3>TaskHub 0.1 · Erster Zwischenstand</h3>
+            <h3>TaskHub 0.1 · Focus-Teststand</h3>
             <p>
               Dunkles Design, Projekte, Boards, Aufgaben und erste Checklisten.
-              Labels, Gruppen, Termine und Backups folgen in den nächsten
+              Prioritäten, Focus-Timer und Focus-Notizen sind jetzt
+              verfügbar. Labels, Gruppen, Termine und Backups folgen in den nächsten
               Ausbauschritten.
             </p>
           </div>

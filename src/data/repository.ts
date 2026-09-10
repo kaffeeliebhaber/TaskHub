@@ -34,6 +34,9 @@ class PreviewRepository implements WorkspaceRepository {
       throw new Error(
         "Die Vorschau wurde in einem anderen Tab geändert. Bitte neu laden.",
       );
+    const previous = localStorage.getItem(this.key);
+    if (previous && !localStorage.getItem("taskhub-preview-before-focus-v2"))
+      localStorage.setItem("taskhub-preview-before-focus-v2", previous);
     const revision = state.revision + 1;
     localStorage.setItem(this.key, JSON.stringify({ ...state, revision }));
     return revision;

@@ -50,3 +50,11 @@ Die Testdaten liegen ausschließlich im getrennten Browser-Vorschauspeicher. Die
 - Native Linux-/Windows-Prüfung weiterhin ausstehend; keine Änderung an den zuvor dokumentierten Desktop-Build-Grenzen.
 
 Die schwebende Karte wurde während eines laufenden Drags visuell geprüft: geneigte vollständige Kopie einschließlich aufgeklappter Checkliste, Quellplatzhalter und hervorgehobene Zielspalte. Nach dem Loslassen wurde die Aufgabe wieder in „In Arbeit“ gespeichert.
+
+## Focus-Teststand (10.09.2026)
+
+- TypeScript-Prüfung und Vite-Produktionsbuild erfolgreich.
+- 14 Frontend-/Domain-Tests erfolgreich, einschließlich absoluter Endzeitpunkte, Pause/Fortsetzen, abgelaufener Sitzungen, freier Sitzungen, Notizzuordnung, Entfernen von Taskreferenzen und kombinierter Prioritäts-/Notizensuche.
+- 7 Rust-/SQLite-Tests erfolgreich, einschließlich Speicherung der neuen Felder und Notizen sowie Migration von Schema 1 und Sicherung einer Schema-2-Datenbank vor Migration 3.
+- Browserprüfung: Projekt/Task anlegen, Seitenleiste einklappen, Priorität ändern, Timer-Vorbereitung öffnen; gespeicherte pausierte Sitzung und zugehörige Notiz nach Wiederöffnen sichtbar. Focus-Ansicht und Board visuell kontrolliert.
+- Native Tauri-Oberfläche und Windows-Build weiterhin nicht in dieser Umgebung geprüft. Ein vollständiger manueller Durchlauf von Drag-and-drop und Timerablauf im nativen Fenster bleibt vor einer Freigabe erforderlich.
