@@ -1,0 +1,21 @@
+name: Funktion vorschlagen
+description: Schlage eine konkrete Verbesserung für TaskHub vor.
+title: "[Idee]: "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Welches Problem möchtest du lösen?
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: Wie könnte eine gute Lösung aussehen?
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Gibt es Alternativen oder Beispiele?

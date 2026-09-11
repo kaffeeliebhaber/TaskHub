@@ -1,0 +1,42 @@
+name: Fehler melden
+description: Melde einen reproduzierbaren Fehler in TaskHub.
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: input
+    id: version
+    attributes:
+      label: TaskHub-Version
+      placeholder: z. B. 0.1 oder Commit-ID
+    validations:
+      required: true
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Umgebung
+      options: [Linux Desktop-App, Windows Desktop-App, Browser-Vorschau, Andere]
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Schritte zum Reproduzieren
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Erwartetes Verhalten
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Tatsächliches Verhalten
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Zusätzlicher Kontext
+      description: Screenshots oder Hinweise ohne persönliche Daten.
