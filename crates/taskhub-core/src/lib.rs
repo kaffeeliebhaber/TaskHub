@@ -1,6 +1,34 @@
 use rusqlite::{params, Connection, TransactionBehavior};
 use serde::{Deserialize, Serialize};
 use std::{collections::HashSet, path::Path};
+fn default_priority() -> String {
+    "none".into()
+}
+fn default_theme() -> String {
+    "cyberpunk".into()
+}
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct FocusSession {
+    pub id: String,
+    pub task_id: Option<String>,
+    pub task_title: String,
+    pub duration_ms: u64,
+    pub remaining_ms: u64,
+    pub end_at: Option<u64>,
+    pub status: String,
+    pub created_at: String,
+}
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct FocusNote {
+    pub id: String,
+    pub session_id: String,
+    pub task_id: Option<String>,
+    pub task_title: String,
+    pub text: String,
+    pub created_at: String,
+}
 pub type Result<T> = std::result::Result<T, String>;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
@@ -42,6 +70,8 @@ pub struct Column {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct Task {
+    #[serde(default = "default_priority")]
+    pub priority: String,
     #[serde(default)]
     pub checklist: Option<Checklist>,
     pub id: String,
@@ -55,6 +85,14 @@ pub struct Task {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct Workspace {
+    #[serde(default = "default_theme")]
+    pub theme: String,
+    #[serde(default)]
+    pub sidebar_collapsed: bool,
+    #[serde(default)]
+    pub focus: Option<FocusSession>,
+    #[serde(default)]
+    pub focus_notes: Vec<FocusNote>,
     pub revision: u64,
     pub active_project_id: Option<String>,
     pub projects: Vec<Project>,
@@ -82,6 +120,48 @@ fn ids<'a>(iter: impl Iterator<Item = &'a str>) -> Result<HashSet<&'a str>> {
 }
 impl Workspace {
     pub fn validate(&self) -> Result<()> {
+        if !["light", "dark", "cyberpunk", "coffee"].contains(&self.theme.as_str()) {
+            return Err("Ungültiges Theme.".into());
+        }
+        let exists = |id: &Option<String>| {
+            id.as_ref()
+                .is_none_or(|id| self.tasks.iter().any(|t| &t.id == id))
+        };
+        if self
+            .tasks
+            .iter()
+            .any(|t| !["none", "low", "medium", "high", "critical"].contains(&t.priority.as_str()))
+        {
+            return Err("Ungültige Priorität.".into());
+        }
+        ids(self.focus_notes.iter().map(|n| n.id.as_str()))?;
+        if self.focus_notes.iter().any(|n| {
+            !exists(&n.task_id)
+                || !valid_text(&n.session_id, 128)
+                || !valid_text(&n.text, 10000)
+                || n.task_title.chars().count() > 300
+                || !valid_text(&n.created_at, 64)
+        }) {
+            return Err("Ungültige Focus-Notiz.".into());
+        }
+        if let Some(f) = &self.focus {
+            if !valid_text(&f.id, 128)
+                || !exists(&f.task_id)
+                || f.task_title.chars().count() > 300
+                || !(60000..=14400000).contains(&f.duration_ms)
+                || f.remaining_ms > f.duration_ms
+                || !["running", "paused", "completed", "stopped"].contains(&f.status.as_str())
+                || (if f.status == "running" {
+                    f.end_at
+                        .is_none_or(|end| end == 0 || end > 9007199254740991)
+                } else {
+                    f.end_at.is_some()
+                })
+                || (f.status == "completed" && f.remaining_ms != 0)
+            {
+                return Err("Ungültige Focus-Zeit.".into());
+            }
+        }
         for task in &self.tasks {
             if let Some(list) = &task.checklist {
                 ids(list.items.iter().map(|item| item.id.as_str()))?;
@@ -131,8 +211,20 @@ impl Database {
         let version: u32 = conn
             .query_row("PRAGMA user_version", [], |r| r.get(0))
             .map_err(err)?;
-        if version > 2 {
+        if version > 4 {
             return Err("Diese Datenbank benötigt eine neuere TaskHub-Version.".into());
+        }
+        if version > 0 && version < 4 && path != Path::new(":memory:") {
+            let stamp = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map_err(err)?
+                .as_nanos();
+            let backup = path.with_file_name(format!(
+                "{}.before-v4-{stamp}.bak",
+                path.file_name().unwrap_or_default().to_string_lossy()
+            ));
+            conn.execute("VACUUM INTO ?1", [backup.to_string_lossy().as_ref()])
+                .map_err(err)?;
         }
         if version == 0 {
             conn.execute_batch(&format!(
@@ -144,15 +236,29 @@ impl Database {
         if version < 2 {
             conn.execute_batch("BEGIN IMMEDIATE; ALTER TABLE tasks ADD COLUMN checklist TEXT; PRAGMA user_version=2; COMMIT;").map_err(err)?;
         }
+        if version < 3 {
+            conn.execute_batch(&format!(
+                "BEGIN IMMEDIATE; {} COMMIT;",
+                include_str!("migration_3.sql")
+            ))
+            .map_err(err)?;
+        }
+        if version < 4 {
+            conn.execute_batch(&format!(
+                "BEGIN IMMEDIATE; {} COMMIT;",
+                include_str!("migration_4.sql")
+            ))
+            .map_err(err)?;
+        }
         Ok(Self { conn })
     }
     pub fn load(&mut self) -> Result<Workspace> {
         let tx = self.conn.transaction().map_err(err)?;
-        let (revision, active_project_id) = tx
+        let (revision, active_project_id,sidebar_collapsed,focus_json,theme): (u64,Option<String>,bool,Option<String>,String) = tx
             .query_row(
-                "SELECT revision,active_project_id FROM metadata WHERE id=1",
+                "SELECT revision,active_project_id,sidebar_collapsed,focus_state,theme FROM metadata WHERE id=1",
                 [],
-                |r| Ok((r.get(0)?, r.get(1)?)),
+                |r| Ok((r.get(0)?, r.get(1)?,r.get(2)?,r.get(3)?,r.get(4)?)),
             )
             .map_err(err)?;
         macro_rules! read {
@@ -186,9 +292,17 @@ impl Database {
                 collapsed: r.get(5)?
             })
         );
-        let tasks=read!("SELECT id,column_id,title,description,position,created_at,updated_at,checklist FROM tasks ORDER BY position,id",|r|Ok(Task{checklist: r.get::<_,Option<String>>(7)?.map(|json|serde_json::from_str(&json).map_err(|e|rusqlite::Error::FromSqlConversionFailure(7,rusqlite::types::Type::Text,Box::new(e)))).transpose()?,id:r.get(0)?,column_id:r.get(1)?,title:r.get(2)?,description:r.get(3)?,position:r.get(4)?,created_at:r.get(5)?,updated_at:r.get(6)?}));
+        let tasks=read!("SELECT id,column_id,title,description,position,created_at,updated_at,checklist,priority FROM tasks ORDER BY position,id",|r|Ok(Task{priority:r.get(8)?,checklist: r.get::<_,Option<String>>(7)?.map(|json|serde_json::from_str(&json).map_err(|e|rusqlite::Error::FromSqlConversionFailure(7,rusqlite::types::Type::Text,Box::new(e)))).transpose()?,id:r.get(0)?,column_id:r.get(1)?,title:r.get(2)?,description:r.get(3)?,position:r.get(4)?,created_at:r.get(5)?,updated_at:r.get(6)?}));
+        let focus = focus_json
+            .map(|json| serde_json::from_str(&json).map_err(err))
+            .transpose()?;
+        let focus_notes=read!("SELECT id,session_id,task_id,task_title,text,created_at FROM focus_notes ORDER BY created_at,id",|r|Ok(FocusNote{id:r.get(0)?,session_id:r.get(1)?,task_id:r.get(2)?,task_title:r.get(3)?,text:r.get(4)?,created_at:r.get(5)?}));
         tx.commit().map_err(err)?;
         Ok(Workspace {
+            theme,
+            sidebar_collapsed,
+            focus,
+            focus_notes,
             revision,
             active_project_id,
             projects,
@@ -222,9 +336,20 @@ impl Database {
             tx.execute("INSERT INTO columns VALUES(?1,?2,?3,?4,?5,?6) ON CONFLICT(id) DO UPDATE SET board_id=excluded.board_id,title=excluded.title,position=excluded.position,width=excluded.width,collapsed=excluded.collapsed",params![c.id,c.board_id,c.title,c.position,c.width,c.collapsed]).map_err(err)?;
         }
         for t in &state.tasks {
-            tx.execute("INSERT INTO tasks (id,column_id,title,description,position,created_at,updated_at,checklist) VALUES(?1,?2,?3,?4,?5,?6,?7,?8) ON CONFLICT(id) DO UPDATE SET column_id=excluded.column_id,title=excluded.title,description=excluded.description,position=excluded.position,updated_at=excluded.updated_at,checklist=excluded.checklist",params![t.id,t.column_id,t.title,t.description,t.position,t.created_at,t.updated_at,t.checklist.as_ref().map(serde_json::to_string).transpose().map_err(err)?]).map_err(err)?;
+            tx.execute("INSERT INTO tasks (id,column_id,title,description,position,created_at,updated_at,checklist,priority) VALUES(?1,?2,?3,?4,?5,?6,?7,?8,?9) ON CONFLICT(id) DO UPDATE SET column_id=excluded.column_id,title=excluded.title,description=excluded.description,position=excluded.position,updated_at=excluded.updated_at,checklist=excluded.checklist,priority=excluded.priority",params![t.id,t.column_id,t.title,t.description,t.position,t.created_at,t.updated_at,t.checklist.as_ref().map(serde_json::to_string).transpose().map_err(err)?,t.priority]).map_err(err)?;
+        }
+        for n in &state.focus_notes {
+            tx.execute("INSERT INTO focus_notes VALUES(?1,?2,?3,?4,?5,?6) ON CONFLICT(id) DO UPDATE SET task_id=excluded.task_id,task_title=excluded.task_title,text=excluded.text",params![n.id,n.session_id,n.task_id,n.task_title,n.text,n.created_at]).map_err(err)?;
         }
         for (table, keep) in [
+            (
+                "focus_notes",
+                state
+                    .focus_notes
+                    .iter()
+                    .map(|n| n.id.as_str())
+                    .collect::<HashSet<_>>(),
+            ),
             (
                 "tasks",
                 state
@@ -262,8 +387,8 @@ impl Database {
         }
         let next = revision + 1;
         tx.execute(
-            "UPDATE metadata SET revision=?1,active_project_id=?2 WHERE id=1",
-            params![next, state.active_project_id],
+            "UPDATE metadata SET revision=?1,active_project_id=?2,sidebar_collapsed=?3,focus_state=?4,theme=?5 WHERE id=1",
+            params![next, state.active_project_id,state.sidebar_collapsed,state.focus.as_ref().map(serde_json::to_string).transpose().map_err(err)?,state.theme],
         )
         .map_err(err)?;
         tx.commit().map_err(err)?;
@@ -275,6 +400,10 @@ mod tests {
     use super::*;
     fn sample() -> Workspace {
         Workspace {
+            theme: "cyberpunk".into(),
+            sidebar_collapsed: false,
+            focus: None,
+            focus_notes: vec![],
             revision: 0,
             active_project_id: Some("p".into()),
             projects: vec![Project {
@@ -295,6 +424,7 @@ mod tests {
                 collapsed: true,
             }],
             tasks: vec![Task {
+                priority: "none".into(),
                 checklist: None,
                 id: "t".into(),
                 column_id: "c".into(),
@@ -416,9 +546,81 @@ mod tests {
                 db.conn
                     .query_row("PRAGMA user_version", [], |r| r.get::<_, u32>(0))
                     .unwrap(),
-                2
+                4
             );
         }
         std::fs::remove_file(path).unwrap();
+    }
+    #[test]
+    fn persists_focus_priority_notes_and_sidebar() {
+        let mut db = Database::open(Path::new(":memory:")).unwrap();
+        let mut s = sample();
+        s.theme = "coffee".into();
+        s.sidebar_collapsed = true;
+        s.tasks[0].priority = "high".into();
+        s.focus = Some(FocusSession {
+            id: "f".into(),
+            task_id: Some("t".into()),
+            task_title: "Küche".into(),
+            duration_ms: 60000,
+            remaining_ms: 60000,
+            end_at: Some(120000),
+            status: "running".into(),
+            created_at: "now".into(),
+        });
+        s.focus_notes.push(FocusNote {
+            id: "n".into(),
+            session_id: "f".into(),
+            task_id: Some("t".into()),
+            task_title: "Küche".into(),
+            text: "Weiter planen".into(),
+            created_at: "now".into(),
+        });
+        db.save(&s).unwrap();
+        let mut loaded = db.load().unwrap();
+        assert!(loaded.sidebar_collapsed);
+        assert_eq!(loaded.tasks[0].priority, "high");
+        assert_eq!(loaded.focus.as_ref().unwrap().end_at, Some(120000));
+        assert_eq!(loaded.focus_notes[0].text, "Weiter planen");
+        assert_eq!(loaded.theme, "coffee");
+        loaded.tasks.clear();
+        loaded.focus.as_mut().unwrap().task_id = None;
+        loaded.focus_notes[0].task_id = None;
+        db.save(&loaded).unwrap();
+        assert_eq!(db.load().unwrap().focus_notes.len(), 1);
+    }
+
+    #[test]
+    fn backs_up_v2_before_migration() {
+        let dir = std::env::temp_dir().join(format!(
+            "taskhub-backup-{}",
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        std::fs::create_dir(&dir).unwrap();
+        let path = dir.join("taskhub.db");
+        {
+            let conn = Connection::open(&path).unwrap();
+            conn.execute_batch(include_str!("schema.sql")).unwrap();
+            conn.execute_batch(
+                "ALTER TABLE tasks ADD COLUMN checklist TEXT; PRAGMA user_version=2;",
+            )
+            .unwrap();
+        }
+        drop(Database::open(&path).unwrap());
+        let backup = std::fs::read_dir(&dir)
+            .unwrap()
+            .map(|e| e.unwrap().path())
+            .find(|p| p.extension().is_some_and(|e| e == "bak"))
+            .unwrap();
+        let conn = Connection::open(backup).unwrap();
+        let version: u32 = conn
+            .query_row("PRAGMA user_version", [], |r| r.get(0))
+            .unwrap();
+        assert_eq!(version, 2);
+        drop(conn);
+        std::fs::remove_dir_all(dir).unwrap();
     }
 }

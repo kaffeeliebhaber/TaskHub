@@ -6,7 +6,7 @@ Eine lokale Desktop-App mit Tauri 2, React, TypeScript und SQLite. Dunkles, mini
 
 - Projektübersicht und dauerhafte linke Navigation; Projekte erstellen, umbenennen und nach Bestätigung löschen.
 - Genau ein Board je Projekt; neue Projekte starten mit Offen, In Arbeit und Erledigt.
-- Bis zu 15 frei benennbare Spalten, horizontales Scrollen, Drag & Drop, alternativ links/rechts im Spaltenmenü.
+- Bis zu 15 frei benennbare Spalten, horizontales Scrollen und animiertes Drag & Drop über den Spaltenkopf.
 - Spalten einklappen, Breite zwischen 220 und 600 px durch Ziehen oder den Regler im Menü ändern.
 - Aufgaben direkt in einer Spalte anlegen, Titel und Beschreibung bearbeiten, nach Bestätigung löschen.
 - Karten innerhalb einer Spalte sortieren und zwischen Spalten verschieben; alternativ Spalte im Bearbeitungsdialog wählen.
@@ -90,7 +90,7 @@ Die App nutzt den plattformgerechten lokalen Datenordner, statt einen Linux-Pfad
 
 Änderungen sind erst bei **Lokal gespeichert** bestätigt. Bei Schreibfehlern bleibt der zuletzt bestätigte Zustand sichtbar; weitere Schreibvorgänge stoppen. Fehlgeschlagene Eingaben müssen nach Behebung und Neuladen erneut ausgeführt werden. Mehrere Desktop-Instanzen erkennen konkurrierende Schreibvorgänge über eine Revision und fordern zum Neuladen auf.
 
-Backups/Papierkorb sind noch nicht implementiert. Für eine manuelle Sicherung alle TaskHub-Instanzen schließen und den **gesamten Datenordner** kopieren, einschließlich eventuell vorhandener `.db-wal`-/`.db-shm`-Dateien. Nicht bei laufender App nur die Hauptdatei kopieren. Löschen entfernt die bestätigten Objekte dauerhaft.
+Eine reguläre Backup-Oberfläche und ein Papierkorb sind noch nicht implementiert. Vor der Erweiterung auf Datenbankschema 4 wird automatisch eine Migrationssicherung angelegt. Für eine manuelle Sicherung alle TaskHub-Instanzen schließen und den **gesamten Datenordner** kopieren, einschließlich eventuell vorhandener `.db-wal`-/`.db-shm`-Dateien. Nicht bei laufender App nur die Hauptdatei kopieren. Löschen entfernt die bestätigten Objekte dauerhaft.
 
 ## Tests und Dokumentation
 
@@ -104,3 +104,7 @@ cargo test -p taskhub-core --locked
 - [Prüfbericht und verbleibende Prüfungen](docs/TESTING.md)
 
 Der SQLite-Kern ist unabhängig von Tauri testbar. `package-lock.json` und `Cargo.lock` sind enthalten. Eine fertige Linux-Binärdatei wird in diesem Zwischenstand nicht mitgeliefert, weil die Ausführungsumgebung keine GLib-/GTK-/WebKit-Entwicklungsbibliotheken besitzt.
+
+## Neuer Teststand: Focus und Board
+
+Bedienung, Datenmigration und Rückkehr zum bisherigen Stand: [Focus-Testanleitung](docs/FOCUS-PREVIEW.md).

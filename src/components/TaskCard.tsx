@@ -1,3 +1,6 @@
+import { PriorityText } from "./Priority";
+import { FocusNotes } from "./FocusNotes";
+import type { FocusNote } from "../domain/focus";
 import { useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { GripVertical } from "lucide-react";
@@ -29,7 +32,10 @@ export function DragAvatar({ preview }: { preview: DragPreview | null }) {
       }}
     >
       <div className="card-open">
-        <h3>{preview.task.title}</h3>
+        <div className="card-title-row">
+          <h3>{preview.task.title}</h3>
+          <PriorityText priority={preview.task.priority} />
+        </div>
         {preview.task.description && <p>{preview.task.description}</p>}
       </div>
       <Checklist value={list} update={async () => false} />
@@ -47,6 +53,8 @@ export function TaskCard({
   onMove,
   onOpen,
   onChecklist,
+  onFocus,
+  notes,
 }: {
   task: Task;
   disabled: boolean;
@@ -56,6 +64,8 @@ export function TaskCard({
   onHover: (id: string | null) => void;
   onMove: (columnId: string, beforeId?: string) => void;
   onOpen: () => void;
+  onFocus: (taskId: string) => void;
+  notes: FocusNote[];
   onChecklist: (edit: (list: ChecklistModel) => void) => Promise<boolean>;
 }) {
   const ref = useRef<HTMLElement>(null);
@@ -100,6 +110,7 @@ export function TaskCard({
   const hit = (x: number, y: number) => {
     const el = document.elementFromPoint(x, y);
     return {
+      focus: !!el?.closest("[data-focus-drop]"),
       column: el?.closest<HTMLElement>("[data-column-id]")?.dataset.columnId,
       task: el?.closest<HTMLElement>("[data-task-id]")?.dataset.taskId,
     };
@@ -111,7 +122,7 @@ export function TaskCard({
       data-task-id={task.id}
       className={`task-card ${drop === task.id ? "drop-target" : ""} ${preview?.task.id === task.id ? "drag-source" : ""}`}
       onPointerDown={(e) => {
-        if (disabled || e.button !== 0) return;
+        if (e.button !== 0) return;
         suppressClick.current = false;
         const box = e.currentTarget.getBoundingClientRect();
         pointer.current = {
@@ -138,7 +149,9 @@ export function TaskCard({
           e.preventDefault();
           onPreview({ ...p, x: e.clientX, y: e.clientY });
           const target = hit(e.clientX, e.clientY);
-          onHover(target.task ?? target.column ?? null);
+          onHover(
+            target.focus ? "focus" : (target.task ?? target.column ?? null),
+          );
         }
       }}
       onPointerUp={(e) => {
@@ -147,7 +160,8 @@ export function TaskCard({
         reset();
         if (!p?.moved) return;
         suppressClick.current = true;
-        if (target.column) onMove(target.column, target.task);
+        if (target.focus) onFocus(task.id);
+        else if (target.column && !disabled) onMove(target.column, target.task);
       }}
       onPointerCancel={() => {
         suppressClick.current = !!pointer.current?.moved;
@@ -160,7 +174,8 @@ export function TaskCard({
         }
       }}
       onClick={(e) => {
-        if ((e.target as HTMLElement).closest(".checklist")) return;
+        if ((e.target as HTMLElement).closest(".checklist, .focus-notes"))
+          return;
         if (suppressClick.current) {
           suppressClick.current = false;
           return;
@@ -180,10 +195,14 @@ export function TaskCard({
           }
         }}
       >
-        <h3>{task.title}</h3>
+        <div className="card-title-row">
+          <h3>{task.title}</h3>
+          <PriorityText priority={task.priority} />
+        </div>
         {task.description && <p>{task.description}</p>}
       </div>
       <GripVertical className="card-grip" size={13} />
+      <FocusNotes notes={notes} compact />
       <Checklist value={task.checklist} update={onChecklist} />
     </article>
   );

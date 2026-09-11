@@ -1,4 +1,15 @@
+import { Sidebar } from "./components/Sidebar";
+import { PriorityFilter, PriorityBadge } from "./components/Priority";
+import { FocusButton, FocusTimer } from "./components/FocusTimer";
+import { useFocus } from "./hooks/useFocus";
+import { notesForTask } from "./domain/focus";
+import { matchesTask, type Priority } from "./domain/model";
 import { TaskCard, DragAvatar, type DragPreview } from "./components/TaskCard";
+import {
+  ColumnDragAvatar,
+  DraggableColumnHeader,
+  type ColumnDragPreview,
+} from "./components/ColumnDrag";
 import { editChecklist } from "./domain/model";
 import {
   NameDialog,
@@ -6,7 +17,7 @@ import {
   TaskEditor,
   ResizeHandle,
 } from "./components/Editors";
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import {
   LayoutGrid,
   Search,
@@ -19,7 +30,6 @@ import {
   Columns3,
   ArrowUpRight,
   Folder,
-  GripVertical,
 } from "lucide-react";
 import { repository } from "./data/repository";
 import { WorkspaceStore } from "./data/store";
@@ -32,6 +42,8 @@ import {
   ordered,
   removeColumn,
   removeProject,
+  themeNames,
+  themes,
   type Task,
   type Workspace,
 } from "./domain/model";
@@ -54,6 +66,8 @@ type Modal =
   | null;
 export function App() {
   const [dragPreview, setDragPreview] = useState<DragPreview | null>(null);
+  const [columnDragPreview, setColumnDragPreview] =
+    useState<ColumnDragPreview | null>(null);
   const [store] = useState(() => new WorkspaceStore(repository));
   const {
     workspace: s,
@@ -63,11 +77,12 @@ export function App() {
   } = useSyncExternalStore(store.subscribe, store.snapshot);
   const [page, setPage] = useState<"board" | "projects" | "search">("board");
   const [query, setQuery] = useState("");
+  const [priorityFilter, setPriorityFilter] = useState<Priority | "all">("all");
+  const focus = useFocus(s, store.change, error);
   const [modal, setModal] = useState<Modal>(null);
   const [path, setPath] = useState("");
   const [adding, setAdding] = useState<string | null>(null);
   const [drop, setDrop] = useState<string | null>(null);
-  const drag = useRef<{ kind: "task" | "column"; id: string } | null>(null);
   useEffect(() => {
     void store.load();
     repository
@@ -94,6 +109,7 @@ export function App() {
     });
     setPage("board");
     setQuery("");
+    setPriorityFilter("all");
     setAdding(null);
   };
   const nameDialog = (
@@ -119,99 +135,39 @@ export function App() {
     edit: (w: Workspace) => void,
   ) => setModal({ kind: "delete", title, message, submit: () => change(edit) });
   const matches = (t: Task) =>
-    `${t.title} ${t.description}`
-      .toLocaleLowerCase("de")
-      .includes(query.toLocaleLowerCase("de"));
+    matchesTask(t, query, priorityFilter, s.focusNotes);
+  const filtering = !!query.trim() || priorityFilter !== "all";
   const boardTasks = s.tasks.filter((t) =>
     columns.some((c) => c.id === t.columnId),
   );
-  const onDrop = (columnId: string, beforeId?: string) => {
-    const item = drag.current;
-    drag.current = null;
-    setDrop(null);
-    if (!item) return;
-    void change((w) => {
-      if (item.kind === "task") moveTask(w, item.id, columnId, beforeId);
-      else moveColumn(w, item.id, columnId);
-    });
-  };
   return (
-    <div className={`shell ${dragPreview ? "is-dragging" : ""}`}>
+    <div
+      className={`shell ${dragPreview || columnDragPreview ? "is-dragging" : ""}`}
+      data-theme={s.theme ?? "cyberpunk"}
+    >
       <DragAvatar preview={dragPreview} />
-      <aside className="sidebar">
-        <div className="brand">
-          <span className="brand-mark">
-            <Columns3 size={20} />
-          </span>
-          TaskHub<span className="version">0.1</span>
-        </div>
-        <div className="workspace-label">DEIN ARBEITSPLATZ</div>
-        <nav aria-label="Hauptnavigation">
-          <button
-            className={page === "projects" ? "nav active" : "nav"}
-            onClick={() => {
-              setPage("projects");
-              setQuery("");
-            }}
-          >
-            <LayoutGrid size={17} />
-            Projekte
-          </button>
-          <button
-            className={page === "search" ? "nav active" : "nav"}
-            onClick={() => {
-              setPage("search");
-              setQuery("");
-            }}
-          >
-            <Search size={17} />
-            Suche
-          </button>
-        </nav>
-        <div className="section-label">
-          <span>
-            Projekte <small>{s.projects.length}</small>
-          </span>
-          <button aria-label="Neues Projekt" onClick={newProject}>
-            <Plus size={16} />
-          </button>
-        </div>
-        <nav className="project-list" aria-label="Projekte">
-          {s.projects.map((p, i) => (
-            <button
-              className={
-                p.id === project?.id && page === "board"
-                  ? "nav active project"
-                  : "nav project"
-              }
-              key={p.id}
-              onClick={() => openProject(p.id)}
-            >
-              <span className={`project-dot color-${i % 4}`} />
-              <span>{p.name}</span>
-            </button>
-          ))}
-        </nav>
-        <div className="sidebar-bottom">
-          <div className="local-status">
-            <span className="status-dot" />
-            {repository.preview ? "Browser-Vorschau" : "Lokal auf deinem Gerät"}
-          </div>
-          <button
-            className="nav"
-            onClick={() => setModal({ kind: "settings" })}
-          >
-            <Settings size={17} />
-            Einstellungen
-          </button>
-          <div className="profile">
-            <span>S</span>
-            <div>
-              Mein Arbeitsplatz<small>Alles an einem Ort.</small>
-            </div>
-          </div>
-        </div>
-      </aside>
+      <ColumnDragAvatar preview={columnDragPreview} />
+      <Sidebar
+        collapsed={!!s.sidebarCollapsed}
+        toggle={() =>
+          void change((w) => {
+            w.sidebarCollapsed = !w.sidebarCollapsed;
+          })
+        }
+        projects={s.projects}
+        activeId={project?.id}
+        page={page}
+        navigate={(page) => {
+          setPage(page);
+          setQuery("");
+          setPriorityFilter("all");
+        }}
+        openProject={openProject}
+        newProject={newProject}
+        settings={() => setModal({ kind: "settings" })}
+        preview={repository.preview}
+      />
+
       <main>
         <div className="topbar">
           <span>
@@ -304,23 +260,17 @@ export function App() {
                   </details>
                 )}
                 <div className="spacer" />
-                <button
-                  className="primary"
-                  disabled={!!error || loading}
-                  onClick={
-                    page === "board" && project && columns.length
-                      ? () => {
-                          setAdding(columns[0].id);
-                          setQuery("");
-                        }
-                      : newProject
-                  }
-                >
-                  <Plus size={16} />
-                  {page === "board" && project && columns.length
-                    ? "Neue Aufgabe"
-                    : "Neues Projekt"}
-                </button>
+                <FocusButton controller={focus} workspace={s} />
+                {(!project || page !== "board") && (
+                  <button
+                    className="primary"
+                    disabled={!!error || loading}
+                    onClick={newProject}
+                  >
+                    <Plus size={16} />
+                    Neues Projekt
+                  </button>
+                )}
               </div>
               <p className="subtitle">
                 {page === "board" && project
@@ -353,6 +303,21 @@ export function App() {
                       </button>
                     )}
                   </div>
+                  <PriorityFilter
+                    value={priorityFilter}
+                    onChange={setPriorityFilter}
+                  />
+                  {filtering && (
+                    <button
+                      className="clear-filters"
+                      onClick={() => {
+                        setQuery("");
+                        setPriorityFilter("all");
+                      }}
+                    >
+                      Zurücksetzen
+                    </button>
+                  )}
                   <span className="column-total">
                     {columns.length} / 15 Spalten
                   </span>
@@ -367,31 +332,18 @@ export function App() {
                       <section
                         key={c.id}
                         data-column-id={c.id}
-                        className={`column ${c.collapsed ? "collapsed" : ""} ${drop === c.id ? "drop-target" : ""}`}
+                        className={`column ${c.collapsed ? "collapsed" : ""} ${drop === c.id ? "drop-target" : ""} ${columnDragPreview?.column.id === c.id ? "column-drag-source" : ""}`}
                         style={{ width: c.collapsed ? 52 : c.width }}
-                        onDragOver={(e) => {
-                          if (drag.current) {
-                            e.preventDefault();
-                            setDrop(c.id);
-                          }
-                        }}
-                        onDrop={(e) => {
-                          e.preventDefault();
-                          onDrop(c.id);
-                        }}
                       >
-                        <header
-                          className="column-header"
-                          draggable={!query}
-                          onDragStart={(e) => {
-                            drag.current = { kind: "column", id: c.id };
-                            e.dataTransfer.setData("text/plain", c.id);
-                            e.dataTransfer.effectAllowed = "move";
-                          }}
-                          onDragEnd={() => {
-                            drag.current = null;
-                            setDrop(null);
-                          }}
+                        <DraggableColumnHeader
+                          column={c}
+                          tasks={tasks}
+                          disabled={filtering}
+                          onPreview={setColumnDragPreview}
+                          onHover={setDrop}
+                          onMove={(beforeId) =>
+                            void change((w) => moveColumn(w, c.id, beforeId))
+                          }
                         >
                           <button
                             title={
@@ -415,7 +367,21 @@ export function App() {
                             )}
                           </button>
                           <span className={`column-indicator color-${i % 4}`} />
-                          <h2>{c.title}</h2>
+                          <h2
+                            title="Doppelklick zum Umbenennen"
+                            onDoubleClick={() =>
+                              nameDialog(
+                                "Spalte umbenennen",
+                                c.title,
+                                (w, v) => {
+                                  w.columns.find((x) => x.id === c.id)!.title =
+                                    v;
+                                },
+                              )
+                            }
+                          >
+                            {c.title}
+                          </h2>
                           <span className="count">
                             {query ? `${visible.length}/` : ""}
                             {tasks.length}
@@ -426,59 +392,6 @@ export function App() {
                                 <MoreHorizontal size={17} />
                               </summary>
                               <div className="menu-content">
-                                <button
-                                  onClick={() =>
-                                    nameDialog(
-                                      "Spalte umbenennen",
-                                      c.title,
-                                      (w, v) => {
-                                        w.columns.find(
-                                          (x) => x.id === c.id,
-                                        )!.title = v;
-                                      },
-                                    )
-                                  }
-                                >
-                                  Umbenennen
-                                </button>
-                                <button
-                                  disabled={i === 0}
-                                  onClick={() =>
-                                    void change((w) =>
-                                      moveColumn(w, c.id, columns[i - 1]?.id),
-                                    )
-                                  }
-                                >
-                                  Nach links
-                                </button>
-                                <button
-                                  disabled={i === columns.length - 1}
-                                  onClick={() =>
-                                    void change((w) =>
-                                      moveColumn(w, c.id, columns[i + 2]?.id),
-                                    )
-                                  }
-                                >
-                                  Nach rechts
-                                </button>
-                                <label className="width-setting">
-                                  Breite: {c.width} px
-                                  <input
-                                    aria-label={`Breite ${c.title}`}
-                                    type="range"
-                                    min="220"
-                                    max="600"
-                                    step="10"
-                                    value={c.width}
-                                    onChange={(e) =>
-                                      void change((w) => {
-                                        w.columns.find(
-                                          (x) => x.id === c.id,
-                                        )!.width = Number(e.target.value);
-                                      })
-                                    }
-                                  />
-                                </label>
                                 <button
                                   className="danger"
                                   onClick={() =>
@@ -494,7 +407,7 @@ export function App() {
                               </div>
                             </details>
                           )}
-                        </header>
+                        </DraggableColumnHeader>
                         {!c.collapsed && (
                           <>
                             <div className="cards">
@@ -502,9 +415,11 @@ export function App() {
                                 <TaskCard
                                   key={t.id}
                                   task={t}
-                                  disabled={!!query}
+                                  disabled={filtering}
                                   drop={drop}
                                   preview={dragPreview}
+                                  onFocus={focus.selectTask}
+                                  notes={notesForTask(s.focusNotes, t)}
                                   onPreview={setDragPreview}
                                   onHover={setDrop}
                                   onMove={(columnId, beforeId) =>
@@ -568,6 +483,8 @@ export function App() {
                   })}
                   <button
                     className="add-column"
+                    data-column-end
+                    data-drop-active={drop === "column-end" || undefined}
                     disabled={columns.length >= 15}
                     onClick={() =>
                       nameDialog("Neue Spalte", "", (w, title) => {
@@ -593,8 +510,8 @@ export function App() {
                   </button>
                 </div>
                 <footer className="board-footer">
-                  {query
-                    ? "Suchergebnisse · zum Sortieren die Suche leeren"
+                  {filtering
+                    ? "Gefilterte Ansicht · zum Sortieren Filter zurücksetzen"
                     : "Karten und Spalten ziehen, um sie zu verschieben."}
                   <span>Dein Tempo. Dein System.</span>
                 </footer>
@@ -611,7 +528,23 @@ export function App() {
                     onChange={(e) => setQuery(e.target.value)}
                   />
                 </div>
-                {query ? (
+                <div className="global-search-filters">
+                  <PriorityFilter
+                    value={priorityFilter}
+                    onChange={setPriorityFilter}
+                  />
+                  {filtering && (
+                    <button
+                      onClick={() => {
+                        setQuery("");
+                        setPriorityFilter("all");
+                      }}
+                    >
+                      Suche und Filter zurücksetzen
+                    </button>
+                  )}
+                </div>
+                {filtering ? (
                   s.tasks.filter(matches).map((t) => {
                     const b = s.boards.find(
                       (b) =>
@@ -631,6 +564,7 @@ export function App() {
                         <span>
                           {t.title}
                           <small>{p?.name}</small>
+                          <PriorityBadge priority={t.priority} />
                         </span>
                         <ArrowUpRight size={18} />
                       </button>
@@ -641,7 +575,7 @@ export function App() {
                     Suche nach einem Titel oder einem Wort aus der Beschreibung.
                   </p>
                 )}
-                {query && !s.tasks.some(matches) && (
+                {filtering && !s.tasks.some(matches) && (
                   <p>Keine Aufgaben gefunden.</p>
                 )}
               </div>
@@ -694,6 +628,15 @@ export function App() {
           </>
         )}
       </main>
+      <FocusTimer
+        controller={focus}
+        workspace={s}
+        boardTasks={boardTasks}
+        change={change}
+        error={error}
+        pending={pending}
+        drop={drop}
+      />
       {modal?.kind === "name" && (
         <NameDialog
           key={modal.title + modal.initial}
@@ -733,11 +676,13 @@ export function App() {
           task={s.tasks.find((t) => t.id === modal.task.id) ?? modal.task}
           columns={columns}
           close={() => setModal(null)}
-          save={(title, description, columnId) =>
+          notes={notesForTask(s.focusNotes, modal.task)}
+          save={(title, description, columnId, priority) =>
             change((w) => {
               const t = w.tasks.find((t) => t.id === modal.task.id)!;
               t.title = title;
               t.description = description;
+              t.priority = priority;
               t.updatedAt = new Date().toISOString();
               if (t.columnId !== columnId) moveTask(w, t.id, columnId);
             })
@@ -756,6 +701,48 @@ export function App() {
       {modal?.kind === "settings" && (
         <Dialog title="Einstellungen" close={() => setModal(null)}>
           <div className="settings-section">
+            <h3>Darstellung</h3>
+            <p className="muted">
+              Wähle die Atmosphäre für deinen Arbeitsplatz.
+            </p>
+            <div
+              className="theme-grid"
+              role="radiogroup"
+              aria-label="Theme auswählen"
+            >
+              {themes.map((theme) => (
+                <button
+                  type="button"
+                  role="radio"
+                  aria-checked={(s.theme ?? "cyberpunk") === theme}
+                  className={`theme-choice theme-preview-${theme} ${(s.theme ?? "cyberpunk") === theme ? "selected" : ""}`}
+                  key={theme}
+                  onClick={() =>
+                    void change((w) => {
+                      w.theme = theme;
+                    })
+                  }
+                >
+                  <span className="theme-swatches">
+                    <i />
+                    <i />
+                    <i />
+                  </span>
+                  <strong>{themeNames[theme]}</strong>
+                  <small>
+                    {theme === "cyberpunk"
+                      ? "Dein bisheriges Theme"
+                      : theme === "coffee"
+                        ? "Warm und konzentriert"
+                        : theme === "light"
+                          ? "Hell und ruhig"
+                          : "Klar und zurückhaltend"}
+                  </small>
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="settings-section">
             <h3>Deine Daten bleiben bei dir.</h3>
             <p>
               {repository.preview
@@ -766,11 +753,11 @@ export function App() {
             <code>{path}</code>
           </div>
           <div className="settings-section">
-            <h3>TaskHub 0.1 · Erster Zwischenstand</h3>
+            <h3>TaskHub 0.1 · Focus-Teststand</h3>
             <p>
-              Dunkles Design, Projekte, Boards, Aufgaben und erste Checklisten.
-              Labels, Gruppen, Termine und Backups folgen in den nächsten
-              Ausbauschritten.
+              Projekte, Boards, Aufgaben, Checklisten, Prioritäten, Focus-Timer
+              und Focus-Notizen sind verfügbar. Labels, Gruppen, Termine und
+              Backups folgen in den nächsten Ausbauschritten.
             </p>
           </div>
           <button className="primary" onClick={() => setModal(null)}>

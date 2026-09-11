@@ -397,6 +397,7 @@ main {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  cursor: grab;
 }
 .column-indicator {
   width: 6px;
@@ -572,16 +573,6 @@ main {
   width: 100%;
   justify-content: flex-start;
   font-size: 12px;
-}
-.width-setting {
-  padding: 10px;
-  font-size: 11px;
-  display: block;
-  color: #a1a4af;
-}
-.width-setting input {
-  padding: 0;
-  margin-top: 8px;
 }
 .overview {
   overflow: auto;
@@ -843,6 +834,52 @@ dialog::backdrop {
 .drag-avatar * {
   pointer-events: none;
 }
+.column-drag-avatar {
+  position: fixed;
+  z-index: 1000;
+  pointer-events: none;
+  margin: 0;
+  max-height: 520px;
+  overflow: hidden;
+  border-color: #a99de9;
+  box-shadow:
+    0 28px 60px #0009,
+    0 8px 20px #0006;
+  transform: rotate(1.2deg) scale(1.018);
+  animation: column-lift 150ms ease-out;
+}
+.column-drag-avatar .column-header {
+  cursor: grabbing;
+}
+.column-drag-avatar .cards {
+  overflow: hidden;
+}
+.column-drag-source {
+  border-style: dashed;
+  border-color: #8174ad;
+  background: #17171d;
+  box-shadow: none;
+}
+.column-drag-source > * {
+  opacity: 0.16;
+}
+.add-column[data-drop-active="true"] {
+  outline: 2px solid #a79cec;
+  outline-offset: 3px;
+  background: #292536;
+}
+@keyframes column-lift {
+  from {
+    transform: rotate(0) scale(1);
+    box-shadow: 0 2px 5px #0003;
+  }
+  to {
+    transform: rotate(1.2deg) scale(1.018);
+    box-shadow:
+      0 28px 60px #0009,
+      0 8px 20px #0006;
+  }
+}
 .drag-source {
   background: #17171e;
   border: 1px dashed #8c7ec0;
@@ -1046,6 +1083,10 @@ dialog::backdrop {
 }
 @media (prefers-reduced-motion: reduce) {
   .drag-avatar {
+    animation: none;
+    transform: none;
+  }
+  .column-drag-avatar {
     animation: none;
     transform: none;
   }
