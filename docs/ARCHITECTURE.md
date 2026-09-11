@@ -30,7 +30,7 @@ Für den ersten lokalen Einzelplatz-Meilenstein wird der gesamte Arbeitsstand zw
 - **Bug-Board:** zunächst Board-Vorlage, später optionale typisierte Bug-Eigenschaften auf demselben Taskmodell. Kein zweites konkurrierendes Board-System.
 - **Web:** HTTP-Repository statt Desktop-Repository, Backend-Dienst mit denselben fachlichen Invarianten. Authentifizierung und Synchronisation separat entwerfen.
 
-Absichtlich noch nicht enthalten: umfangreiches Task-Popup, Rich Text, Labels, mehrere Checklisten je Task, Gruppen, Priorität, Termine, Anhänge, Kommentare, Archiv/Papierkorb, automatische Backups, Filter und Regeln. Auch native Menüleiste, Projektduplikation, Inline-Taskbearbeitung und Tastatur-Sortierung von Karten sind noch Ausbaupunkte. Karten können bereits per Dialog ohne Mausziehen die Spalte wechseln; Spalten besitzen Links-/Rechtsaktionen.
+Absichtlich noch nicht enthalten: umfangreiche Task-Detailleiste, Rich Text, Labels, mehrere Checklisten je Task, Gruppen, Termine, Anhänge, Kommentare, Archiv/Papierkorb, automatische Backups und Regeln. Auch native Menüleiste, Projektduplikation und Tastatur-Sortierung von Karten sind noch Ausbaupunkte. Karten können bereits per Dialog ohne Mausziehen die Spalte wechseln; Spalten werden am vollständigen Kopf animiert gezogen.
 
 ## Betrieb
 

@@ -6,7 +6,7 @@ Eine lokale Desktop-App mit Tauri 2, React, TypeScript und SQLite. Dunkles, mini
 
 - Projektübersicht und dauerhafte linke Navigation; Projekte erstellen, umbenennen und nach Bestätigung löschen.
 - Genau ein Board je Projekt; neue Projekte starten mit Offen, In Arbeit und Erledigt.
-- Bis zu 15 frei benennbare Spalten, horizontales Scrollen, Drag & Drop, alternativ links/rechts im Spaltenmenü.
+- Bis zu 15 frei benennbare Spalten, horizontales Scrollen und animiertes Drag & Drop über den Spaltenkopf.
 - Spalten einklappen, Breite zwischen 220 und 600 px durch Ziehen oder den Regler im Menü ändern.
 - Aufgaben direkt in einer Spalte anlegen, Titel und Beschreibung bearbeiten, nach Bestätigung löschen.
 - Karten innerhalb einer Spalte sortieren und zwischen Spalten verschieben; alternativ Spalte im Bearbeitungsdialog wählen.

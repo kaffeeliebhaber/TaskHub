@@ -62,5 +62,5 @@ Die schwebende Karte wurde während eines laufenden Drags visuell geprüft: gene
 ## Bedienung und Themes (11.09.2026)
 
 - TypeScript-Prüfung, Vite-Produktionsbuild und 16 Frontend-/Domain-Tests erfolgreich.
-- Breitenregler, Doppelklick-Umbenennung, eigener Prioritätsfilter, Timer-Ende mit Rückkehr zur Vorbereitung und interaktive Checkliste im Focus-Raum im Browser geprüft.
+- Breitenänderung am Spaltenrand, Doppelklick-Umbenennung, eigener Prioritätsfilter, Timer-Ende mit Rückkehr zur Vorbereitung und interaktive Checkliste im Focus-Raum im Browser geprüft.
 - Theme-Auswahl und Speicherung für Hell, Dunkel, Cyberpunk und Kaffee geprüft.

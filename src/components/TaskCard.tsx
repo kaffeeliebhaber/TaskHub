@@ -1,6 +1,5 @@
-import { PriorityBadge } from "./Priority";
+import { PriorityText } from "./Priority";
 import { FocusNotes } from "./FocusNotes";
-import { priorities, priorityNames, type Priority } from "../domain/model";
 import type { FocusNote } from "../domain/focus";
 import { useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
@@ -33,8 +32,10 @@ export function DragAvatar({ preview }: { preview: DragPreview | null }) {
       }}
     >
       <div className="card-open">
-        <PriorityBadge priority={preview.task.priority} />
-        <h3>{preview.task.title}</h3>
+        <div className="card-title-row">
+          <h3>{preview.task.title}</h3>
+          <PriorityText priority={preview.task.priority} />
+        </div>
         {preview.task.description && <p>{preview.task.description}</p>}
       </div>
       <Checklist value={list} update={async () => false} />
@@ -53,7 +54,6 @@ export function TaskCard({
   onOpen,
   onChecklist,
   onFocus,
-  onPriority,
   notes,
 }: {
   task: Task;
@@ -65,7 +65,6 @@ export function TaskCard({
   onMove: (columnId: string, beforeId?: string) => void;
   onOpen: () => void;
   onFocus: (taskId: string) => void;
-  onPriority: (priority: Priority) => Promise<boolean>;
   notes: FocusNote[];
   onChecklist: (edit: (list: ChecklistModel) => void) => Promise<boolean>;
 }) {
@@ -175,11 +174,7 @@ export function TaskCard({
         }
       }}
       onClick={(e) => {
-        if (
-          (e.target as HTMLElement).closest(
-            ".checklist, .priority-control, .focus-notes",
-          )
-        )
+        if ((e.target as HTMLElement).closest(".checklist, .focus-notes"))
           return;
         if (suppressClick.current) {
           suppressClick.current = false;
@@ -200,33 +195,13 @@ export function TaskCard({
           }
         }}
       >
-        <h3>{task.title}</h3>
+        <div className="card-title-row">
+          <h3>{task.title}</h3>
+          <PriorityText priority={task.priority} />
+        </div>
         {task.description && <p>{task.description}</p>}
       </div>
       <GripVertical className="card-grip" size={13} />
-      <div
-        className="priority-control"
-        onPointerDown={(e) => e.stopPropagation()}
-        onClick={(e) => e.stopPropagation()}
-        onKeyDown={(e) => e.stopPropagation()}
-      >
-        <label
-          className={`priority-select priority-${task.priority ?? "none"}`}
-        >
-          <span className="sr-only">Priorität für {task.title}</span>
-          <select
-            aria-label={`Priorität für ${task.title}`}
-            value={task.priority ?? "none"}
-            onChange={(e) => void onPriority(e.target.value as Priority)}
-          >
-            {priorities.map((p) => (
-              <option key={p} value={p}>
-                {p === "none" ? "Priorität festlegen" : priorityNames[p]}
-              </option>
-            ))}
-          </select>
-        </label>
-      </div>
       <FocusNotes notes={notes} compact />
       <Checklist value={task.checklist} update={onChecklist} />
     </article>

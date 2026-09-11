@@ -5,6 +5,11 @@ import { useFocus } from "./hooks/useFocus";
 import { notesForTask } from "./domain/focus";
 import { matchesTask, type Priority } from "./domain/model";
 import { TaskCard, DragAvatar, type DragPreview } from "./components/TaskCard";
+import {
+  ColumnDragAvatar,
+  DraggableColumnHeader,
+  type ColumnDragPreview,
+} from "./components/ColumnDrag";
 import { editChecklist } from "./domain/model";
 import {
   NameDialog,
@@ -12,7 +17,7 @@ import {
   TaskEditor,
   ResizeHandle,
 } from "./components/Editors";
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import {
   LayoutGrid,
   Search,
@@ -25,7 +30,6 @@ import {
   Columns3,
   ArrowUpRight,
   Folder,
-  GripVertical,
 } from "lucide-react";
 import { repository } from "./data/repository";
 import { WorkspaceStore } from "./data/store";
@@ -62,6 +66,8 @@ type Modal =
   | null;
 export function App() {
   const [dragPreview, setDragPreview] = useState<DragPreview | null>(null);
+  const [columnDragPreview, setColumnDragPreview] =
+    useState<ColumnDragPreview | null>(null);
   const [store] = useState(() => new WorkspaceStore(repository));
   const {
     workspace: s,
@@ -77,7 +83,6 @@ export function App() {
   const [path, setPath] = useState("");
   const [adding, setAdding] = useState<string | null>(null);
   const [drop, setDrop] = useState<string | null>(null);
-  const drag = useRef<{ kind: "task" | "column"; id: string } | null>(null);
   useEffect(() => {
     void store.load();
     repository
@@ -135,25 +140,13 @@ export function App() {
   const boardTasks = s.tasks.filter((t) =>
     columns.some((c) => c.id === t.columnId),
   );
-  const onDrop = (columnId?: string, beforeId?: string) => {
-    const item = drag.current;
-    drag.current = null;
-    setDrop(null);
-    if (!item) return;
-    void change((w) => {
-      if (item.kind === "task") {
-        if (columnId) moveTask(w, item.id, columnId, beforeId);
-      } else {
-        moveColumn(w, item.id, columnId);
-      }
-    });
-  };
   return (
     <div
-      className={`shell ${dragPreview ? "is-dragging" : ""}`}
+      className={`shell ${dragPreview || columnDragPreview ? "is-dragging" : ""}`}
       data-theme={s.theme ?? "cyberpunk"}
     >
       <DragAvatar preview={dragPreview} />
+      <ColumnDragAvatar preview={columnDragPreview} />
       <Sidebar
         collapsed={!!s.sidebarCollapsed}
         toggle={() =>
@@ -339,39 +332,19 @@ export function App() {
                       <section
                         key={c.id}
                         data-column-id={c.id}
-                        className={`column ${c.collapsed ? "collapsed" : ""} ${drop === c.id ? "drop-target" : ""}`}
+                        className={`column ${c.collapsed ? "collapsed" : ""} ${drop === c.id ? "drop-target" : ""} ${columnDragPreview?.column.id === c.id ? "column-drag-source" : ""}`}
                         style={{ width: c.collapsed ? 52 : c.width }}
-                        onDragOver={(e) => {
-                          if (drag.current) {
-                            e.preventDefault();
-                            setDrop(c.id);
-                          }
-                        }}
-                        onDrop={(e) => {
-                          e.preventDefault();
-                          onDrop(c.id);
-                        }}
                       >
-                        <header className="column-header">
-                          <span
-                            className="column-drag-handle"
-                            role="button"
-                            tabIndex={0}
-                            title="Spalte mit allen Aufgaben verschieben"
-                            aria-label={`${c.title} mit allen Aufgaben verschieben`}
-                            draggable={!filtering}
-                            onDragStart={(e) => {
-                              drag.current = { kind: "column", id: c.id };
-                              e.dataTransfer.setData("text/plain", c.id);
-                              e.dataTransfer.effectAllowed = "move";
-                            }}
-                            onDragEnd={() => {
-                              drag.current = null;
-                              setDrop(null);
-                            }}
-                          >
-                            <GripVertical size={14} />
-                          </span>
+                        <DraggableColumnHeader
+                          column={c}
+                          tasks={tasks}
+                          disabled={filtering}
+                          onPreview={setColumnDragPreview}
+                          onHover={setDrop}
+                          onMove={(beforeId) =>
+                            void change((w) => moveColumn(w, c.id, beforeId))
+                          }
+                        >
                           <button
                             title={
                               c.collapsed
@@ -420,63 +393,6 @@ export function App() {
                               </summary>
                               <div className="menu-content">
                                 <button
-                                  onClick={() =>
-                                    nameDialog(
-                                      "Spalte umbenennen",
-                                      c.title,
-                                      (w, v) => {
-                                        w.columns.find(
-                                          (x) => x.id === c.id,
-                                        )!.title = v;
-                                      },
-                                    )
-                                  }
-                                >
-                                  Umbenennen
-                                </button>
-                                <button
-                                  disabled={i === 0}
-                                  onClick={() =>
-                                    void change((w) =>
-                                      moveColumn(w, c.id, columns[i - 1]?.id),
-                                    )
-                                  }
-                                >
-                                  Nach links
-                                </button>
-                                <button
-                                  disabled={i === columns.length - 1}
-                                  onClick={() =>
-                                    void change((w) =>
-                                      moveColumn(w, c.id, columns[i + 2]?.id),
-                                    )
-                                  }
-                                >
-                                  Nach rechts
-                                </button>
-                                <label className="width-setting">
-                                  Breite: {c.width} px
-                                  <input
-                                    aria-label={`Breite ${c.title}`}
-                                    type="range"
-                                    min="220"
-                                    max="600"
-                                    step="10"
-                                    value={c.width}
-                                    onPointerDown={(e) => e.stopPropagation()}
-                                    onInput={(e) => {
-                                      const width = Number(
-                                        e.currentTarget.value,
-                                      );
-                                      void change((w) => {
-                                        w.columns.find(
-                                          (x) => x.id === c.id,
-                                        )!.width = width;
-                                      });
-                                    }}
-                                  />
-                                </label>
-                                <button
                                   className="danger"
                                   onClick={() =>
                                     confirmDelete(
@@ -491,7 +407,7 @@ export function App() {
                               </div>
                             </details>
                           )}
-                        </header>
+                        </DraggableColumnHeader>
                         {!c.collapsed && (
                           <>
                             <div className="cards">
@@ -504,15 +420,6 @@ export function App() {
                                   preview={dragPreview}
                                   onFocus={focus.selectTask}
                                   notes={notesForTask(s.focusNotes, t)}
-                                  onPriority={(priority) =>
-                                    change((w) => {
-                                      const task = w.tasks.find(
-                                        (x) => x.id === t.id,
-                                      )!;
-                                      task.priority = priority;
-                                      task.updatedAt = new Date().toISOString();
-                                    })
-                                  }
                                   onPreview={setDragPreview}
                                   onHover={setDrop}
                                   onMove={(columnId, beforeId) =>
@@ -576,16 +483,9 @@ export function App() {
                   })}
                   <button
                     className="add-column"
+                    data-column-end
+                    data-drop-active={drop === "column-end" || undefined}
                     disabled={columns.length >= 15}
-                    onDragOver={(e) => {
-                      if (drag.current?.kind === "column") e.preventDefault();
-                    }}
-                    onDrop={(e) => {
-                      if (drag.current?.kind === "column") {
-                        e.preventDefault();
-                        onDrop();
-                      }
-                    }}
                     onClick={() =>
                       nameDialog("Neue Spalte", "", (w, title) => {
                         w.columns.push({

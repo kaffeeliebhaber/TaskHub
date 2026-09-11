@@ -8,6 +8,13 @@ export function PriorityBadge({ priority = "none" }: { priority?: Priority }) {
     </span>
   );
 }
+export function PriorityText({ priority = "none" }: { priority?: Priority }) {
+  return priority === "none" ? null : (
+    <span className={`priority-text priority-${priority}`}>
+      {priorityNames[priority]}
+    </span>
+  );
+}
 export function PriorityFilter({
   value,
   onChange,

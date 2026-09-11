@@ -160,41 +160,34 @@
   align-items: center;
   margin-bottom: 18px;
 }
-.priority-control {
-  padding: 0 14px 7px;
-  touch-action: auto;
-}
-.priority-select select {
-  border: 0;
-  padding: 3px 6px;
-  width: auto;
-  max-width: 100%;
-  font-size: 10px;
-  background: #302d3b;
-  color: #b8adcf;
-  cursor: pointer;
-}
-.priority-none select {
-  background: transparent;
-  color: #777e8b;
-  font-size: 10px;
-  padding-left: 0;
-}
-.priority-low select,
 .priority-low {
   color: #99b6d9;
 }
-.priority-medium select,
 .priority-medium {
   color: #d3b987;
 }
-.priority-high select,
 .priority-high {
   color: #e9a282;
 }
-.priority-critical select,
 .priority-critical {
   color: #f39ba8;
+}
+.card-title-row {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  min-width: 0;
+}
+.card-title-row h3 {
+  flex: 1;
+  min-width: 0;
+}
+.priority-text {
+  flex-shrink: 0;
+  font-size: 10px;
+  line-height: 1.55;
+  font-weight: 550;
+  white-space: nowrap;
 }
 .priority-badge {
   font-size: 10px;
@@ -809,8 +802,8 @@
   --theme-input: #fbfaf7;
   --theme-border: #d4d0c7;
   --theme-border-soft: #ddd9d0;
-  --theme-text: #27282c;
-  --theme-muted: #6e7078;
+  --theme-text: #17181b;
+  --theme-muted: #50535b;
   --theme-accent: #786fca;
   --theme-accent-hover: #8b82dc;
   --theme-accent-ink: #ffffff;
@@ -938,6 +931,45 @@
 .shell[data-theme="light"] .column,
 .shell[data-theme="light"] .focus-writing {
   box-shadow: 0 8px 24px #4a443413;
+}
+.shell[data-theme="light"] .topbar,
+.shell[data-theme="light"] .eyebrow,
+.shell[data-theme="light"] .section-label,
+.shell[data-theme="light"] .workspace-label,
+.shell[data-theme="light"] .nav,
+.shell[data-theme="light"] .column-total,
+.shell[data-theme="light"] .board-footer,
+.shell[data-theme="light"] .column-empty,
+.shell[data-theme="light"] .local-status {
+  color: #4e5159;
+}
+.shell[data-theme="light"] .task-card .card-open p,
+.shell[data-theme="light"] .saved-note p,
+.shell[data-theme="light"] .focus-task-drop p {
+  color: #42464e;
+}
+.shell[data-theme="light"] .add-task,
+.shell[data-theme="light"] .focus-notes,
+.shell[data-theme="light"] .checklist-toggle,
+.shell[data-theme="light"] .checklist-name,
+.shell[data-theme="light"] .checklist-item,
+.shell[data-theme="light"] .search-field,
+.shell[data-theme="light"] .priority-filter,
+.shell[data-theme="light"] .count,
+.shell[data-theme="light"] .checklist-hint {
+  color: #50545c;
+}
+.shell[data-theme="light"] .priority-low {
+  color: #356a9e;
+}
+.shell[data-theme="light"] .priority-medium {
+  color: #806019;
+}
+.shell[data-theme="light"] .priority-high {
+  color: #a84529;
+}
+.shell[data-theme="light"] .priority-critical {
+  color: #ac2942;
 }
 
 .focus-current-checklist {
