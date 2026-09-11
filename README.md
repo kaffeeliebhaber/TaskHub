@@ -78,7 +78,9 @@ npm ci
 npm run dev
 ```
 
-[Lokale Vorschau](http://localhost:1420) öffnen. Die **deutlich gekennzeichnete Browser-Vorschau** verwendet einen separaten Browserspeicher, keine SQLite-Datenbank. Sie eignet sich für UI-Tests und ist noch keine produktive Web-Version. Desktop-Daten und Vorschau-Daten werden nicht synchronisiert. Eine neue Desktop-Installation beginnt leer; es werden keine Beispieldaten in deine Datenbank geschrieben.
+[Lokale Vorschau](http://localhost:1420) öffnen. Im Browser erscheint zuerst die öffentliche Landingpage. Die Schaltflächen **TaskHub ausprobieren** und **Dashboard öffnen** führen vorübergehend ohne Anmeldung zum Dashboard unter `http://localhost:1420/app`.
+
+Die **deutlich gekennzeichnete Browser-Vorschau** des Dashboards verwendet einen separaten Browserspeicher, keine SQLite-Datenbank. Sie eignet sich für UI-Tests und ist noch keine produktive Web-Version. Desktop-Daten und Vorschau-Daten werden nicht synchronisiert. Die Tauri-Desktop-App öffnet weiterhin direkt das Dashboard und verwendet SQLite. Eine neue Desktop-Installation beginnt leer; es werden keine Beispieldaten in deine Datenbank geschrieben.
 
 ## Daten
 
