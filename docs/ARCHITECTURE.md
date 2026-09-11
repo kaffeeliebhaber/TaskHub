@@ -47,3 +47,5 @@ Spalten verwenden HTML5-Drag-and-Drop; Karten verwenden Pointer Capture mit sich
 `domain/focus.ts` enthält die unabhängig testbare Zeit- und Notizlogik. `useFocus` aktualisiert nur die Anzeige; ein gespeicherter Endzeitpunkt vermeidet Drift durch pausierte Browsertabs. Alle dauerhaften Änderungen laufen durch die bestehende Speicherwarteschlange. Eine Sitzung kann ohne Task bestehen; beim Löschen eines Tasks werden ihre Referenzen gelöst und der frühere Titel bleibt erhalten. Notizen sind eigenständige Datensätze und bleiben über neue Sitzungen hinweg erhalten.
 
 Migration 3 ergänzt `tasks.priority`, die Seitenleisten-Einstellung, einen typisierten JSON-Sitzungszustand in den Metadaten und die Tabelle `focus_notes`. Vor einer bestehenden Datenbankmigration wird mit SQLite `VACUUM INTO` eine konsistente Sicherung erstellt. Browser-Vorschau und Desktop behalten getrennte Repository-Adapter.
+
+Migration 4 ergänzt das gespeicherte Oberflächen-Theme in den Metadaten. Die React-Oberfläche wendet Themes über semantische CSS-Variablen an; Cyberpunk bleibt die Ausgangspalette, während Hell, Dunkel und Kaffee dieselben Komponenten verwenden.

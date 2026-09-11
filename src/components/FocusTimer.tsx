@@ -19,10 +19,11 @@ import {
   startFocus,
   type FocusSession,
 } from "../domain/focus";
-import { id, type Task, type Workspace } from "../domain/model";
+import { editChecklist, id, type Task, type Workspace } from "../domain/model";
 import { useFocus } from "../hooks/useFocus";
 import { PriorityBadge } from "./Priority";
 import { FocusNotes } from "./FocusNotes";
+import { Checklist } from "./Checklist";
 type Controller = ReturnType<typeof useFocus>;
 type Change = (edit: (w: Workspace) => void) => Promise<boolean>;
 export function FocusButton({
@@ -389,6 +390,21 @@ function FocusRoom({
                 </>
               )}
             </div>
+            {task && (
+              <div className="focus-current-checklist">
+                <Checklist
+                  value={task.checklist}
+                  update={(edit) =>
+                    change((w) => {
+                      const current = w.tasks.find(
+                        (item) => item.id === task.id,
+                      );
+                      if (current) editChecklist(current, edit);
+                    })
+                  }
+                />
+              </div>
+            )}
             <div className="focus-controls">
               {!ended ? (
                 <>
@@ -455,8 +471,11 @@ function FocusRoom({
                         await change((w) => {
                           if (w.focus?.id === f.id) changeFocus(w, "stop");
                         })
-                      )
+                      ) {
                         setConfirmStop(false);
+                        await leave();
+                        newSession();
+                      }
                     }}
                   >
                     Focus-Zeit beenden

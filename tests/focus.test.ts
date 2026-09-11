@@ -23,6 +23,7 @@ describe("Focus-Zeit und Prioritäten", () => {
   it("uses deadlines across reloads and pauses without losing remaining time", () => {
     const w = sample();
     startFocus(w, 1, w.tasks[0].id, 1000);
+    expect(focusRemaining(w.focus!, 0)).toBe(60000);
     expect(focusRemaining(JSON.parse(JSON.stringify(w.focus)), 11000)).toBe(
       50000,
     );
@@ -38,8 +39,18 @@ describe("Focus-Zeit und Prioritäten", () => {
     const w = sample();
     startFocus(w, 25, w.tasks[0].id);
     const column = w.tasks[0].columnId;
-    appendFocusNote(w, w.focus!.id, " Nächster Schritt ", "00000000-0000-4000-8000-000000000001");
-    appendFocusNote(w, w.focus!.id, "Nächster Schritt", "00000000-0000-4000-8000-000000000001");
+    appendFocusNote(
+      w,
+      w.focus!.id,
+      " Nächster Schritt ",
+      "00000000-0000-4000-8000-000000000001",
+    );
+    appendFocusNote(
+      w,
+      w.focus!.id,
+      "Nächster Schritt",
+      "00000000-0000-4000-8000-000000000001",
+    );
     expect(w.tasks[0].columnId).toBe(column);
     expect(w.focusNotes).toHaveLength(1);
     w.tasks = [];

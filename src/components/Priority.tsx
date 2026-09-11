@@ -1,4 +1,4 @@
-import { Flag, SlidersHorizontal } from "lucide-react";
+import { Check, ChevronDown, Flag, SlidersHorizontal } from "lucide-react";
 import { priorities, priorityNames, type Priority } from "../domain/model";
 export function PriorityBadge({ priority = "none" }: { priority?: Priority }) {
   return priority === "none" ? null : (
@@ -15,23 +15,41 @@ export function PriorityFilter({
   value: Priority | "all";
   onChange: (v: Priority | "all") => void;
 }) {
+  const options: Array<{ value: Priority | "all"; label: string }> = [
+    { value: "all", label: "Alle Prioritäten" },
+    { value: "none", label: "Keine Priorität" },
+    ...priorities
+      .filter((priority) => priority !== "none")
+      .map((priority) => ({ value: priority, label: priorityNames[priority] })),
+  ];
+  const current = options.find((option) => option.value === value)!;
   return (
-    <label
+    <details
       className={`priority-filter ${value !== "all" ? "filter-active" : ""}`}
     >
-      <SlidersHorizontal size={14} />
-      <select
-        aria-label="Nach Priorität filtern"
-        value={value}
-        onChange={(e) => onChange(e.target.value as Priority | "all")}
-      >
-        <option value="all">Alle Prioritäten</option>
-        {priorities.map((p) => (
-          <option key={p} value={p}>
-            {priorityNames[p]}
-          </option>
+      <summary aria-label={`Prioritätsfilter: ${current.label}`}>
+        <SlidersHorizontal size={14} />
+        <span>{current.label}</span>
+        <ChevronDown size={13} />
+      </summary>
+      <div className="priority-filter-menu" role="menu">
+        {options.map((option) => (
+          <button
+            type="button"
+            role="menuitemradio"
+            aria-checked={option.value === value}
+            key={option.value}
+            onClick={(event) => {
+              onChange(option.value);
+              event.currentTarget.closest("details")?.removeAttribute("open");
+            }}
+          >
+            <span className={`filter-dot priority-${option.value}`} />
+            {option.label}
+            {option.value === value && <Check size={13} />}
+          </button>
         ))}
-      </select>
-    </label>
+      </div>
+    </details>
   );
 }

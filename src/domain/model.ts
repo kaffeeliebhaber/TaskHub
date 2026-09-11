@@ -41,6 +41,14 @@ export const priorityNames: Record<Priority, string> = {
   high: "Hoch",
   critical: "Kritisch",
 };
+export const themes = ["light", "dark", "cyberpunk", "coffee"] as const;
+export type Theme = (typeof themes)[number];
+export const themeNames: Record<Theme, string> = {
+  light: "Hell",
+  dark: "Dunkel",
+  cyberpunk: "Cyberpunk",
+  coffee: "Kaffee",
+};
 export interface Task {
   priority?: Priority;
   checklist?: Checklist | null;
@@ -53,6 +61,7 @@ export interface Task {
   updatedAt: string;
 }
 export interface Workspace {
+  theme?: Theme;
   sidebarCollapsed?: boolean;
   focus?: FocusSession | null;
   focusNotes?: FocusNote[];
@@ -64,6 +73,7 @@ export interface Workspace {
   activeProjectId: string | null;
 }
 export const emptyWorkspace = (): Workspace => ({
+  theme: "cyberpunk",
   revision: 0,
   projects: [],
   boards: [],
@@ -174,6 +184,8 @@ export function removeProject(s: Workspace, projectId: string) {
     s.activeProjectId = s.projects[0]?.id ?? null;
 }
 export function validate(s: Workspace) {
+  if (s.theme !== undefined && !themes.includes(s.theme))
+    throw new Error("Ungültiges Theme.");
   if (
     s.sidebarCollapsed !== undefined &&
     typeof s.sidebarCollapsed !== "boolean"

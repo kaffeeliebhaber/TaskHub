@@ -38,6 +38,8 @@ import {
   ordered,
   removeColumn,
   removeProject,
+  themeNames,
+  themes,
   type Task,
   type Workspace,
 } from "./domain/model";
@@ -133,18 +135,24 @@ export function App() {
   const boardTasks = s.tasks.filter((t) =>
     columns.some((c) => c.id === t.columnId),
   );
-  const onDrop = (columnId: string, beforeId?: string) => {
+  const onDrop = (columnId?: string, beforeId?: string) => {
     const item = drag.current;
     drag.current = null;
     setDrop(null);
     if (!item) return;
     void change((w) => {
-      if (item.kind === "task") moveTask(w, item.id, columnId, beforeId);
-      else moveColumn(w, item.id, columnId);
+      if (item.kind === "task") {
+        if (columnId) moveTask(w, item.id, columnId, beforeId);
+      } else {
+        moveColumn(w, item.id, columnId);
+      }
     });
   };
   return (
-    <div className={`shell ${dragPreview ? "is-dragging" : ""}`}>
+    <div
+      className={`shell ${dragPreview ? "is-dragging" : ""}`}
+      data-theme={s.theme ?? "cyberpunk"}
+    >
       <DragAvatar preview={dragPreview} />
       <Sidebar
         collapsed={!!s.sidebarCollapsed}
@@ -260,24 +268,16 @@ export function App() {
                 )}
                 <div className="spacer" />
                 <FocusButton controller={focus} workspace={s} />
-                <button
-                  className="primary"
-                  disabled={!!error || loading}
-                  onClick={
-                    page === "board" && project && columns.length
-                      ? () => {
-                          setAdding(columns[0].id);
-                          setQuery("");
-                          setPriorityFilter("all");
-                        }
-                      : newProject
-                  }
-                >
-                  <Plus size={16} />
-                  {page === "board" && project && columns.length
-                    ? "Neue Aufgabe"
-                    : "Neues Projekt"}
-                </button>
+                {(!project || page !== "board") && (
+                  <button
+                    className="primary"
+                    disabled={!!error || loading}
+                    onClick={newProject}
+                  >
+                    <Plus size={16} />
+                    Neues Projekt
+                  </button>
+                )}
               </div>
               <p className="subtitle">
                 {page === "board" && project
@@ -352,19 +352,26 @@ export function App() {
                           onDrop(c.id);
                         }}
                       >
-                        <header
-                          className="column-header"
-                          draggable={!filtering}
-                          onDragStart={(e) => {
-                            drag.current = { kind: "column", id: c.id };
-                            e.dataTransfer.setData("text/plain", c.id);
-                            e.dataTransfer.effectAllowed = "move";
-                          }}
-                          onDragEnd={() => {
-                            drag.current = null;
-                            setDrop(null);
-                          }}
-                        >
+                        <header className="column-header">
+                          <span
+                            className="column-drag-handle"
+                            role="button"
+                            tabIndex={0}
+                            title="Spalte mit allen Aufgaben verschieben"
+                            aria-label={`${c.title} mit allen Aufgaben verschieben`}
+                            draggable={!filtering}
+                            onDragStart={(e) => {
+                              drag.current = { kind: "column", id: c.id };
+                              e.dataTransfer.setData("text/plain", c.id);
+                              e.dataTransfer.effectAllowed = "move";
+                            }}
+                            onDragEnd={() => {
+                              drag.current = null;
+                              setDrop(null);
+                            }}
+                          >
+                            <GripVertical size={14} />
+                          </span>
                           <button
                             title={
                               c.collapsed
@@ -387,7 +394,21 @@ export function App() {
                             )}
                           </button>
                           <span className={`column-indicator color-${i % 4}`} />
-                          <h2>{c.title}</h2>
+                          <h2
+                            title="Doppelklick zum Umbenennen"
+                            onDoubleClick={() =>
+                              nameDialog(
+                                "Spalte umbenennen",
+                                c.title,
+                                (w, v) => {
+                                  w.columns.find((x) => x.id === c.id)!.title =
+                                    v;
+                                },
+                              )
+                            }
+                          >
+                            {c.title}
+                          </h2>
                           <span className="count">
                             {query ? `${visible.length}/` : ""}
                             {tasks.length}
@@ -442,13 +463,17 @@ export function App() {
                                     max="600"
                                     step="10"
                                     value={c.width}
-                                    onChange={(e) =>
+                                    onPointerDown={(e) => e.stopPropagation()}
+                                    onInput={(e) => {
+                                      const width = Number(
+                                        e.currentTarget.value,
+                                      );
                                       void change((w) => {
                                         w.columns.find(
                                           (x) => x.id === c.id,
-                                        )!.width = Number(e.target.value);
-                                      })
-                                    }
+                                        )!.width = width;
+                                      });
+                                    }}
                                   />
                                 </label>
                                 <button
@@ -552,6 +577,15 @@ export function App() {
                   <button
                     className="add-column"
                     disabled={columns.length >= 15}
+                    onDragOver={(e) => {
+                      if (drag.current?.kind === "column") e.preventDefault();
+                    }}
+                    onDrop={(e) => {
+                      if (drag.current?.kind === "column") {
+                        e.preventDefault();
+                        onDrop();
+                      }
+                    }}
                     onClick={() =>
                       nameDialog("Neue Spalte", "", (w, title) => {
                         w.columns.push({
@@ -767,6 +801,48 @@ export function App() {
       {modal?.kind === "settings" && (
         <Dialog title="Einstellungen" close={() => setModal(null)}>
           <div className="settings-section">
+            <h3>Darstellung</h3>
+            <p className="muted">
+              Wähle die Atmosphäre für deinen Arbeitsplatz.
+            </p>
+            <div
+              className="theme-grid"
+              role="radiogroup"
+              aria-label="Theme auswählen"
+            >
+              {themes.map((theme) => (
+                <button
+                  type="button"
+                  role="radio"
+                  aria-checked={(s.theme ?? "cyberpunk") === theme}
+                  className={`theme-choice theme-preview-${theme} ${(s.theme ?? "cyberpunk") === theme ? "selected" : ""}`}
+                  key={theme}
+                  onClick={() =>
+                    void change((w) => {
+                      w.theme = theme;
+                    })
+                  }
+                >
+                  <span className="theme-swatches">
+                    <i />
+                    <i />
+                    <i />
+                  </span>
+                  <strong>{themeNames[theme]}</strong>
+                  <small>
+                    {theme === "cyberpunk"
+                      ? "Dein bisheriges Theme"
+                      : theme === "coffee"
+                        ? "Warm und konzentriert"
+                        : theme === "light"
+                          ? "Hell und ruhig"
+                          : "Klar und zurückhaltend"}
+                  </small>
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="settings-section">
             <h3>Deine Daten bleiben bei dir.</h3>
             <p>
               {repository.preview
@@ -779,10 +855,9 @@ export function App() {
           <div className="settings-section">
             <h3>TaskHub 0.1 · Focus-Teststand</h3>
             <p>
-              Dunkles Design, Projekte, Boards, Aufgaben und erste Checklisten.
-              Prioritäten, Focus-Timer und Focus-Notizen sind jetzt
-              verfügbar. Labels, Gruppen, Termine und Backups folgen in den nächsten
-              Ausbauschritten.
+              Projekte, Boards, Aufgaben, Checklisten, Prioritäten, Focus-Timer
+              und Focus-Notizen sind verfügbar. Labels, Gruppen, Termine und
+              Backups folgen in den nächsten Ausbauschritten.
             </p>
           </div>
           <button className="primary" onClick={() => setModal(null)}>

@@ -18,6 +18,30 @@ const fixture = () => {
   return s;
 };
 describe("board operations", () => {
+  it("moves a complete column while preserving its tasks", () => {
+    const workspace = emptyWorkspace();
+    addProject(workspace, "Projekt");
+    const [first, second, third] = ordered(workspace.columns);
+    addTask(workspace, first.id, "Bleibt in der Spalte");
+    moveColumn(workspace, first.id, third.id);
+    expect(ordered(workspace.columns).map((column) => column.id)).toEqual([
+      second.id,
+      first.id,
+      third.id,
+    ]);
+    expect(workspace.tasks[0].columnId).toBe(first.id);
+  });
+
+  it("accepts the four themes and rejects unknown values", () => {
+    const workspace = emptyWorkspace();
+    for (const theme of ["light", "dark", "cyberpunk", "coffee"] as const) {
+      workspace.theme = theme;
+      expect(() => validate(workspace)).not.toThrow();
+    }
+    (workspace as { theme?: string }).theme = "unknown";
+    expect(() => validate(workspace)).toThrow("Ungültiges Theme");
+  });
+
   it("reorders cards in both directions without duplicates", () => {
     const s = fixture();
     const [a, b, c] = s.tasks;

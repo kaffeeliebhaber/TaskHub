@@ -55,6 +55,12 @@ Die schwebende Karte wurde während eines laufenden Drags visuell geprüft: gene
 
 - TypeScript-Prüfung und Vite-Produktionsbuild erfolgreich.
 - 14 Frontend-/Domain-Tests erfolgreich, einschließlich absoluter Endzeitpunkte, Pause/Fortsetzen, abgelaufener Sitzungen, freier Sitzungen, Notizzuordnung, Entfernen von Taskreferenzen und kombinierter Prioritäts-/Notizensuche.
-- 7 Rust-/SQLite-Tests erfolgreich, einschließlich Speicherung der neuen Felder und Notizen sowie Migration von Schema 1 und Sicherung einer Schema-2-Datenbank vor Migration 3.
+- 7 Rust-/SQLite-Tests erfolgreich, einschließlich Speicherung der neuen Felder, Notizen und Themes sowie Migration von Schema 1 und Sicherung einer älteren Datenbank vor Migration 4.
 - Browserprüfung: Projekt/Task anlegen, Seitenleiste einklappen, Priorität ändern, Timer-Vorbereitung öffnen; gespeicherte pausierte Sitzung und zugehörige Notiz nach Wiederöffnen sichtbar. Focus-Ansicht und Board visuell kontrolliert.
 - Native Tauri-Oberfläche und Windows-Build weiterhin nicht in dieser Umgebung geprüft. Ein vollständiger manueller Durchlauf von Drag-and-drop und Timerablauf im nativen Fenster bleibt vor einer Freigabe erforderlich.
+
+## Bedienung und Themes (11.09.2026)
+
+- TypeScript-Prüfung, Vite-Produktionsbuild und 16 Frontend-/Domain-Tests erfolgreich.
+- Breitenregler, Doppelklick-Umbenennung, eigener Prioritätsfilter, Timer-Ende mit Rückkehr zur Vorbereitung und interaktive Checkliste im Focus-Raum im Browser geprüft.
+- Theme-Auswahl und Speicherung für Hell, Dunkel, Cyberpunk und Kaffee geprüft.

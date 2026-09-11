@@ -19,7 +19,7 @@ export interface FocusNote {
 }
 export const focusRemaining = (focus: FocusSession, now = Date.now()) =>
   focus.status === "running"
-    ? Math.max(0, (focus.endAt ?? now) - now)
+    ? Math.min(focus.durationMs, Math.max(0, (focus.endAt ?? now) - now))
     : focus.remainingMs;
 export const formatTime = (ms: number) => {
   const seconds = Math.ceil(Math.max(0, ms) / 1000);

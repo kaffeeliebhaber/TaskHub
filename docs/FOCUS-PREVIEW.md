@@ -15,8 +15,17 @@ Im Projektordner `./start-preview.sh` oder `npm run dev` starten und wie bisher 
 
 ## Speicherung und Rückkehr
 
-Die Desktop-Datenbank wird auf Schema 3 erweitert. Vor der Migration wird neben der Datenbank eine konsistente Datei `taskhub.db.before-v3-….bak` angelegt. Die Browser-Vorschau sichert ihren bisherigen Stand einmalig unter dem Speicherschlüssel `taskhub-preview-before-focus-v2`. Das ersetzt keine reguläre Backup-Funktion.
+Die Desktop-Datenbank verwendet nun Schema 4. Vor der Migration wird neben der Datenbank eine konsistente Datei `taskhub.db.before-v4-….bak` angelegt. Die Browser-Vorschau sichert ihren bisherigen Stand einmalig unter dem Speicherschlüssel `taskhub-preview-before-focus-v2`. Das ersetzt keine reguläre Backup-Funktion.
 
 Ein Git-Wechsel setzt nur Programmdateien zurück, nicht Nutzerdaten. Für einen Desktop-Rückwechsel auf die ältere Version zuerst alle App-Instanzen schließen und den Datenordner sichern. Anschließend die Migrationssicherung als `taskhub.db` in einem sauberen Datenordner wiederherstellen. Neuere Daten bleiben in der zuvor erstellten Ordnerkopie erhalten. Browserdaten sind getrennt nach Adresse und Browserprofil gespeichert; die bisherige Adresse weiterverwenden.
 
 Dieser Teststand enthält noch keine Focus-Statistik, automatische Pausenzyklen oder Hintergrundbenachrichtigung bei geschlossener App. Der Endzeitpunkt bleibt gespeichert, auch wenn die App geschlossen wird. Ein Abschlusston ist möglich, solange die Anwendung aktiv ist und der Browser Audio erlaubt.
+
+## Bedienungsstand
+
+- Neue Aufgaben werden innerhalb der gewünschten Spalte über „Aufgabe hinzufügen“ erstellt.
+- Ein Doppelklick auf einen Spaltentitel öffnet die Umbenennung.
+- Der Griff links im Spaltenkopf verschiebt eine komplette Spalte samt Aufgaben. Über „Nach links“ und „Nach rechts“ bleibt dieselbe Funktion auch per Tastatur erreichbar.
+- Der Breitenregler im Spaltenmenü speichert 220 bis 600 Pixel; der Rand der Spalte kann weiterhin direkt gezogen werden.
+- Nach dem Beenden einer Focus-Zeit öffnet sich automatisch die Timer-Vorbereitung. Die Checkliste der gewählten Aufgabe ist in der Focus-Ansicht vollständig bedienbar.
+- Unter Einstellungen stehen Hell, Dunkel, Cyberpunk und Kaffee zur Verfügung. Cyberpunk entspricht dem bisherigen Erscheinungsbild; die Auswahl wird lokal gespeichert.

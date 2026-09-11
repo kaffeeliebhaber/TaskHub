@@ -90,7 +90,7 @@ Die App nutzt den plattformgerechten lokalen Datenordner, statt einen Linux-Pfad
 
 Änderungen sind erst bei **Lokal gespeichert** bestätigt. Bei Schreibfehlern bleibt der zuletzt bestätigte Zustand sichtbar; weitere Schreibvorgänge stoppen. Fehlgeschlagene Eingaben müssen nach Behebung und Neuladen erneut ausgeführt werden. Mehrere Desktop-Instanzen erkennen konkurrierende Schreibvorgänge über eine Revision und fordern zum Neuladen auf.
 
-Eine reguläre Backup-Oberfläche und ein Papierkorb sind noch nicht implementiert. Vor der Erweiterung auf Datenbankschema 3 wird automatisch eine Migrationssicherung angelegt. Für eine manuelle Sicherung alle TaskHub-Instanzen schließen und den **gesamten Datenordner** kopieren, einschließlich eventuell vorhandener `.db-wal`-/`.db-shm`-Dateien. Nicht bei laufender App nur die Hauptdatei kopieren. Löschen entfernt die bestätigten Objekte dauerhaft.
+Eine reguläre Backup-Oberfläche und ein Papierkorb sind noch nicht implementiert. Vor der Erweiterung auf Datenbankschema 4 wird automatisch eine Migrationssicherung angelegt. Für eine manuelle Sicherung alle TaskHub-Instanzen schließen und den **gesamten Datenordner** kopieren, einschließlich eventuell vorhandener `.db-wal`-/`.db-shm`-Dateien. Nicht bei laufender App nur die Hauptdatei kopieren. Löschen entfernt die bestätigten Objekte dauerhaft.
 
 ## Tests und Dokumentation
 
