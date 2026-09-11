@@ -1,5 +1,6 @@
+import { loadBrowserWorkspace, saveBrowserWorkspace } from "./browserStorage";
 import { invoke, isTauri } from "@tauri-apps/api/core";
-import { emptyWorkspace, validate, type Workspace } from "../domain/model";
+import { type Workspace } from "../domain/model";
 export interface WorkspaceRepository {
   load(): Promise<Workspace>;
   save(state: Workspace): Promise<number>;
@@ -21,25 +22,11 @@ class DesktopRepository implements WorkspaceRepository {
 // Explicit browser preview only. Desktop errors must never silently fall back here.
 class PreviewRepository implements WorkspaceRepository {
   readonly preview = true;
-  private key = "taskhub-preview-v1";
-  async load() {
-    const json = localStorage.getItem(this.key);
-    const state: Workspace = json ? JSON.parse(json) : emptyWorkspace();
-    validate(state);
-    return state;
+  load() {
+    return loadBrowserWorkspace();
   }
-  async save(state: Workspace) {
-    validate(state);
-    if ((await this.load()).revision !== state.revision)
-      throw new Error(
-        "Die Vorschau wurde in einem anderen Tab geändert. Bitte neu laden.",
-      );
-    const previous = localStorage.getItem(this.key);
-    if (previous && !localStorage.getItem("taskhub-preview-before-focus-v2"))
-      localStorage.setItem("taskhub-preview-before-focus-v2", previous);
-    const revision = state.revision + 1;
-    localStorage.setItem(this.key, JSON.stringify({ ...state, revision }));
-    return revision;
+  save(state: Workspace) {
+    return saveBrowserWorkspace(state);
   }
   async location() {
     return "Browser-Vorschau · separat im lokalen Browserspeicher";

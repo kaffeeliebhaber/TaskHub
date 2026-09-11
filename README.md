@@ -60,7 +60,7 @@ npm ci
 npm run dev
 ```
 
-Anschließend [http://localhost:1420](http://localhost:1420) öffnen. Die Schaltfläche **TaskHub ausprobieren** führt von der Landingpage vorübergehend ohne Anmeldung zum Dashboard.
+Anschließend [http://localhost:1420](http://localhost:1420) öffnen. Das Board öffnet sich direkt. Die Landingpage bleibt unter `/landing` erreichbar.
 
 Die Browser-Vorschau verwendet einen eigenen Browserspeicher und greift nicht auf die SQLite-Daten der Desktop-App zu.
 
@@ -146,3 +146,7 @@ Wenn dir die Idee gefällt, kannst du das Projekt mit einem **Star** unterstütz
 Gebaut mit Tauri, React, TypeScript und SQLite.
 
 </div>
+
+## Neu: Archiv und erweiterte Aufgaben
+
+Abschlussdatum, gefilterte Archivierungsjobs, Wiederherstellung, Bildanhänge, Links, Abhängigkeiten, einklappbare Karten und Obsidian-Canvas-Export sind verfügbar. Bedienung und Grenzen: [Testanleitung](docs/TASK-TOOLS.md).

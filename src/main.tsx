@@ -6,7 +6,8 @@ import "./styles.css";
 import "./focus.css";
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
-    {"__TAURI_INTERNALS__" in window || window.location.pathname === "/app" ? (
+    {"__TAURI_INTERNALS__" in window ||
+    window.location.pathname !== "/landing" ? (
       <App />
     ) : (
       <LandingPage />

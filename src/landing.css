@@ -766,20 +766,20 @@
   font-size: 13px;
   color: #b2adbc;
 }
-.focus-controls {
+.landing-focus-controls {
   display: flex;
   justify-content: center;
   gap: 10px;
   margin-top: 26px;
 }
-.focus-controls button {
+.landing-focus-controls button {
   width: 38px;
   height: 38px;
   border-radius: 50%;
   background: #a99af4;
   color: #19142b;
 }
-.focus-controls button + button {
+.landing-focus-controls button + button {
   background: #24222c;
   color: #8f8999;
 }

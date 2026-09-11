@@ -136,7 +136,7 @@ function FocusPreview() {
         <small>JETZT KONZENTRIEREN</small>
         <strong>24:36</strong>
         <p>Hero-Bereich gestalten</p>
-        <div className="focus-controls">
+        <div className="landing-focus-controls">
           <button aria-label="Timer pausieren">Ⅱ</button>
           <button aria-label="Timer zurücksetzen">
             <TimerReset size={15} />

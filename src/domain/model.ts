@@ -1,3 +1,4 @@
+import { canDepend, safeUrl } from "./taskTools";
 import type { FocusSession, FocusNote } from "./focus";
 export interface Project {
   id: string;
@@ -49,7 +50,17 @@ export const themeNames: Record<Theme, string> = {
   cyberpunk: "Cyberpunk",
   coffee: "Kaffee",
 };
+export interface TaskDetails {
+  closedAt?: string | null;
+  archivedAt?: string | null;
+  collapsed?: boolean;
+  dependencies?: string[];
+  links?: { id: string; url: string; title: string }[];
+  images?: { id: string; name: string; data: string }[];
+}
 export interface Task {
+  details?: TaskDetails;
+
   priority?: Priority;
   checklist?: Checklist | null;
   id: string;
@@ -61,6 +72,7 @@ export interface Task {
   updatedAt: string;
 }
 export interface Workspace {
+  showImages?: boolean;
   theme?: Theme;
   sidebarCollapsed?: boolean;
   focus?: FocusSession | null;
@@ -226,6 +238,30 @@ export function validate(s: Workspace) {
   if (s.tasks.some((t) => !priorities.includes(t.priority ?? "none")))
     throw new Error("Ungültige Priorität.");
   for (const task of s.tasks) {
+    const d = task.details;
+    if (d) {
+      if (
+        (d.closedAt && !Number.isFinite(Date.parse(d.closedAt))) ||
+        (d.archivedAt && !Number.isFinite(Date.parse(d.archivedAt)))
+      )
+        throw Error("Ungültiges Abschlussdatum.");
+      if (d.links?.some((l) => !safeUrl(l.url)))
+        throw Error("Links benötigen http oder https.");
+      if (
+        (d.images?.length ?? 0) > 6 ||
+        d.images?.some(
+          (i) =>
+            !/^data:image\/(png|jpeg|webp|gif);base64,[A-Za-z0-9+/=]+$/.test(
+              i.data,
+            ) || i.data.length > 2800000,
+        )
+      )
+        throw Error("Ungültiges Bild.");
+      if (d.dependencies?.some((id) => !canDepend(s, task.id, id)))
+        throw Error(
+          "Abhängigkeiten müssen im selben Board liegen und dürfen keinen Kreis bilden.",
+        );
+    }
     const list = task.checklist;
     if (
       list &&

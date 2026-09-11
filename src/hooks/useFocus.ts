@@ -16,7 +16,8 @@ export function useFocus(
   const audio = useRef<AudioContext | null>(null);
   const enableAudio = () => {
     try {
-      audio.current ??= new AudioContext();
+      if (!audio.current || audio.current.state === "closed")
+        audio.current = new AudioContext();
       void audio.current.resume().catch(() => {});
     } catch {
       /* Sound is optional; the timer remains visual. */
@@ -26,7 +27,7 @@ export function useFocus(
     try {
       const ctx = audio.current;
       if (!ctx || ctx.state !== "running") return;
-      [0, 0.25].forEach((delay) => {
+      [0, 0.3, 0.6].forEach((delay) => {
         const oscillator = ctx.createOscillator(),
           gain = ctx.createGain();
         oscillator.connect(gain);
@@ -34,7 +35,7 @@ export function useFocus(
         oscillator.frequency.value = delay ? 660 : 523;
         const t = ctx.currentTime + delay;
         gain.gain.setValueAtTime(0, t);
-        gain.gain.linearRampToValueAtTime(0.07, t + 0.02);
+        gain.gain.linearRampToValueAtTime(0.18, t + 0.02);
         gain.gain.exponentialRampToValueAtTime(0.001, t + 0.3);
         oscillator.start(t);
         oscillator.stop(t + 0.32);
@@ -43,6 +44,15 @@ export function useFocus(
       /* Optional audio must not interrupt completion. */
     }
   };
+  useEffect(() => {
+    const unlock = () => enableAudio();
+    window.addEventListener("pointerdown", unlock);
+    window.addEventListener("keydown", unlock);
+    return () => {
+      window.removeEventListener("pointerdown", unlock);
+      window.removeEventListener("keydown", unlock);
+    };
+  }, []);
   useEffect(() => {
     const tick = () => setNow(Date.now());
     const timer = window.setInterval(tick, 250);
@@ -97,6 +107,10 @@ export function useFocus(
     setSelectedTaskId,
     active,
     enableAudio,
+    testSound: () => {
+      enableAudio();
+      void audio.current?.resume().then(chime);
+    },
     selectTask: (taskId: string) => {
       if (!active) setSelectedTaskId(taskId);
       setDockOpen(true);

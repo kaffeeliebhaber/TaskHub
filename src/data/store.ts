@@ -42,6 +42,11 @@ export class WorkspaceStore {
         const next = structuredClone(this.state.workspace);
         edit(next);
         detachDeletedTasks(next);
+        for (const task of next.tasks)
+          if (task.details?.dependencies)
+            task.details.dependencies = task.details.dependencies.filter((id) =>
+              next.tasks.some((t) => t.id === id),
+            );
         validate(next);
         next.revision = await this.repository.save(next);
         this.emit({ workspace: next });

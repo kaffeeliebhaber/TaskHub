@@ -1,3 +1,6 @@
+import { exportCanvas } from "./data/external";
+import { Archive } from "./components/Archive";
+import { boardCanvas } from "./domain/taskTools";
 import { Sidebar } from "./components/Sidebar";
 import { PriorityFilter, PriorityBadge } from "./components/Priority";
 import { FocusButton, FocusTimer } from "./components/FocusTimer";
@@ -65,6 +68,7 @@ type Modal =
   | { kind: "settings" }
   | null;
 export function App() {
+  const [archiveOpen, setArchiveOpen] = useState(false);
   const [dragPreview, setDragPreview] = useState<DragPreview | null>(null);
   const [columnDragPreview, setColumnDragPreview] =
     useState<ColumnDragPreview | null>(null);
@@ -135,10 +139,11 @@ export function App() {
     edit: (w: Workspace) => void,
   ) => setModal({ kind: "delete", title, message, submit: () => change(edit) });
   const matches = (t: Task) =>
+    !t.details?.archivedAt &&
     matchesTask(t, query, priorityFilter, s.focusNotes);
   const filtering = !!query.trim() || priorityFilter !== "all";
-  const boardTasks = s.tasks.filter((t) =>
-    columns.some((c) => c.id === t.columnId),
+  const boardTasks = s.tasks.filter(
+    (t) => !t.details?.archivedAt && columns.some((c) => c.id === t.columnId),
   );
   return (
     <div
@@ -249,7 +254,7 @@ export function App() {
                         onClick={() =>
                           confirmDelete(
                             "Projekt löschen?",
-                            `„${project.name}“ mit allen Spalten und ${boardTasks.length} Aufgaben dauerhaft löschen?`,
+                            `„${project.name}“ mit allen Spalten und ${s.tasks.filter((t) => columns.some((c) => c.id === t.columnId)).length} Aufgaben einschließlich Archiv dauerhaft löschen?`,
                             (w) => removeProject(w, project.id),
                           )
                         }
@@ -261,6 +266,20 @@ export function App() {
                 )}
                 <div className="spacer" />
                 <FocusButton controller={focus} workspace={s} />
+                {board && (
+                  <>
+                    <button onClick={() => setArchiveOpen(true)}>Archiv</button>
+                    <button
+                      onClick={() => {
+                        void exportCanvas(boardCanvas(s, board.id))
+                          .then((message) => window.alert(message))
+                          .catch((error) => window.alert(String(error)));
+                      }}
+                    >
+                      Obsidian exportieren
+                    </button>
+                  </>
+                )}
                 {(!project || page !== "board") && (
                   <button
                     className="primary"
@@ -325,7 +344,9 @@ export function App() {
                 <div className="board" aria-label={`Board ${project.name}`}>
                   {columns.map((c, i) => {
                     const tasks = ordered(
-                        s.tasks.filter((t) => t.columnId === c.id),
+                        s.tasks.filter(
+                          (t) => t.columnId === c.id && !t.details?.archivedAt,
+                        ),
                       ),
                       visible = tasks.filter(matches);
                     return (
@@ -397,7 +418,7 @@ export function App() {
                                   onClick={() =>
                                     confirmDelete(
                                       "Spalte löschen?",
-                                      `„${c.title}“ und ${tasks.length} Aufgaben dauerhaft löschen?`,
+                                      `„${c.title}“ und ${s.tasks.filter((t) => t.columnId === c.id).length} Aufgaben einschließlich Archiv dauerhaft löschen?`,
                                       (w) => removeColumn(w, c.id),
                                     )
                                   }
@@ -415,6 +436,20 @@ export function App() {
                                 <TaskCard
                                   key={t.id}
                                   task={t}
+                                  showImages={s.showImages !== false}
+                                  dependencies={s.tasks.filter((d) =>
+                                    t.details?.dependencies?.includes(d.id),
+                                  )}
+                                  onCollapse={() =>
+                                    void change((w) => {
+                                      const task = w.tasks.find(
+                                        (x) => x.id === t.id,
+                                      )!;
+                                      task.details ??= {};
+                                      task.details.collapsed =
+                                        !task.details.collapsed;
+                                    })
+                                  }
                                   disabled={filtering}
                                   drop={drop}
                                   preview={dragPreview}
@@ -637,6 +672,14 @@ export function App() {
         pending={pending}
         drop={drop}
       />
+      {archiveOpen && board && (
+        <Archive
+          workspace={s}
+          boardId={board.id}
+          change={change}
+          close={() => setArchiveOpen(false)}
+        />
+      )}
       {modal?.kind === "name" && (
         <NameDialog
           key={modal.title + modal.initial}
@@ -677,12 +720,23 @@ export function App() {
           columns={columns}
           close={() => setModal(null)}
           notes={notesForTask(s.focusNotes, modal.task)}
-          save={(title, description, columnId, priority) =>
+          workspace={s}
+          archive={() => {
+            void change((w) => {
+              const t = w.tasks.find((t) => t.id === modal.task.id)!;
+              if (t.details?.closedAt)
+                t.details.archivedAt = new Date().toISOString();
+            }).then((ok) => {
+              if (ok) setModal(null);
+            });
+          }}
+          save={(title, description, columnId, priority, details) =>
             change((w) => {
               const t = w.tasks.find((t) => t.id === modal.task.id)!;
               t.title = title;
               t.description = description;
               t.priority = priority;
+              t.details = details;
               t.updatedAt = new Date().toISOString();
               if (t.columnId !== columnId) moveTask(w, t.id, columnId);
             })
@@ -702,6 +756,19 @@ export function App() {
         <Dialog title="Einstellungen" close={() => setModal(null)}>
           <div className="settings-section">
             <h3>Darstellung</h3>
+            <label className="check-label">
+              <input
+                type="checkbox"
+                checked={s.showImages !== false}
+                onChange={(e) =>
+                  void change((w) => {
+                    w.showImages = e.target.checked;
+                  })
+                }
+              />{" "}
+              Bilder auf Karten anzeigen
+            </label>
+            <button onClick={focus.testSound}>Timer-Signalton testen</button>
             <p className="muted">
               Wähle die Atmosphäre für deinen Arbeitsplatz.
             </p>

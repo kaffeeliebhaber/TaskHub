@@ -1,3 +1,5 @@
+import { TaskDetails } from "./TaskDetails";
+import type { Workspace, TaskDetails as Details } from "../domain/model";
 import type { FocusNote } from "../domain/focus";
 import { FocusNotes } from "./FocusNotes";
 import { useRef, useState, type FormEvent } from "react";
@@ -113,7 +115,11 @@ export function TaskEditor({
   close,
   save,
   remove,
+  workspace,
+  archive,
 }: {
+  workspace: Workspace;
+  archive: () => void;
   task: Task;
   notes: FocusNote[];
   columns: Column[];
@@ -123,9 +129,12 @@ export function TaskEditor({
     description: string,
     columnId: string,
     priority: Priority,
+    details: Details,
   ) => Promise<boolean>;
   remove: () => void;
 }) {
+  const [readingImages, setReadingImages] = useState(false);
+  const [details, setDetails] = useState<Details>(task.details ?? {});
   const [title, setTitle] = useState(task.title),
     [description, setDescription] = useState(task.description),
     [columnId, setColumnId] = useState(task.columnId),
@@ -138,7 +147,9 @@ export function TaskEditor({
         onSubmit={async (e) => {
           e.preventDefault();
           setBusy(true);
-          if (await save(title.trim(), description, columnId, priority))
+          if (
+            await save(title.trim(), description, columnId, priority, details)
+          )
             close();
           else
             setError(
@@ -194,6 +205,13 @@ export function TaskEditor({
             ))}
           </select>
         </label>
+        <TaskDetails
+          task={task}
+          workspace={workspace}
+          value={details}
+          onChange={setDetails}
+          onBusy={setReadingImages}
+        />
         <FocusNotes notes={notes} />
         <p className="muted">
           Erstellt am {new Date(task.createdAt).toLocaleDateString("de-DE")}
@@ -207,11 +225,37 @@ export function TaskEditor({
           <button type="button" className="danger" onClick={remove}>
             Löschen
           </button>
+          {details.closedAt && (
+            <button
+              type="button"
+              disabled={busy || readingImages || !title.trim()}
+              onClick={async () => {
+                setBusy(true);
+                if (
+                  await save(
+                    title.trim(),
+                    description,
+                    columnId,
+                    priority,
+                    details,
+                  )
+                )
+                  archive();
+                else setError("Nicht gespeichert. Bitte Fehler prüfen.");
+                setBusy(false);
+              }}
+            >
+              Archivieren
+            </button>
+          )}
           <div className="spacer" />
           <button type="button" onClick={close}>
             Abbrechen
           </button>
-          <button className="primary" disabled={!title.trim() || busy}>
+          <button
+            className="primary"
+            disabled={!title.trim() || busy || readingImages}
+          >
             Speichern
           </button>
         </div>
