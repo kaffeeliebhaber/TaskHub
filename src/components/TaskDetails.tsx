@@ -2,6 +2,7 @@ import { openExternal } from "../data/external";
 import { useState } from "react";
 import {
   id,
+  featureEnabled,
   type Task,
   type TaskDetails as Details,
   type Workspace,
@@ -41,7 +42,7 @@ export function TaskDetails({
   };
   return (
     <section className="task-extras">
-      <label className="check-label">
+      {featureEnabled(workspace,"completion") && <label className="check-label">
         <input
           type="checkbox"
           checked={!!value.closedAt}
@@ -52,13 +53,13 @@ export function TaskDetails({
           }
         />{" "}
         Aufgabe abgeschlossen
-      </label>
+      </label>}
       {value.closedAt && (
         <small>
           Geschlossen am {new Date(value.closedAt).toLocaleString("de-DE")}
         </small>
       )}
-      <h3>Abhängigkeiten</h3>
+      {featureEnabled(workspace,"dependencies") && <details className="task-section"><summary>Abhängigkeiten</summary>
       <p className="muted">Diese Aufgabe wartet auf:</p>
       {(value.dependencies ?? []).map((depId) => {
         const dep = workspace.tasks.find((t) => t.id === depId);
@@ -104,8 +105,8 @@ export function TaskDetails({
               {t.title}
             </option>
           ))}
-      </select>
-      <h3>Links</h3>
+      </select></details>}
+      {featureEnabled(workspace,"links") && <details className="task-section" open><summary>URLs</summary>
       {value.links?.map((l) => (
         <div className="dependency" key={l.id}>
           <a
@@ -155,7 +156,8 @@ export function TaskDetails({
           Hinzufügen
         </button>
       </div>
-      <h3>Bilder</h3>
+      </details>}
+      {featureEnabled(workspace,"images") && <details className="task-section"><summary>Bilder</summary>
       <p className="muted">
         Bis zu 6 Bilder, jeweils maximal 2 MB. Bilder werden lokal gespeichert.
       </p>
@@ -197,7 +199,7 @@ export function TaskDetails({
             </button>
           </figure>
         ))}
-      </div>
+      </div></details>}
     </section>
   );
 }

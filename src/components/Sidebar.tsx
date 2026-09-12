@@ -19,6 +19,9 @@ export function Sidebar({
   openProject,
   newProject,
   settings,
+  archive,
+  profile,
+  user,
   preview,
 }: {
   collapsed: boolean;
@@ -30,6 +33,9 @@ export function Sidebar({
   openProject: (id: string) => void;
   newProject: () => void;
   settings: () => void;
+  archive: () => void;
+  profile: () => void;
+  user: { name: string; avatar?: string | null };
   preview: boolean;
 }) {
   return (
@@ -76,6 +82,9 @@ export function Sidebar({
         >
           <LayoutGrid size={17} />
           <span className="sidebar-label">Projekte</span>
+        </button>
+        <button className="nav" aria-label="Archiv" title="Archiv" onClick={archive}>
+          <Folder size={17} /><span className="sidebar-label">Archiv</span>
         </button>
         <button
           aria-label="Suche"
@@ -136,12 +145,12 @@ export function Sidebar({
           <Settings size={17} />
           <span className="sidebar-label">Einstellungen</span>
         </button>
-        <div className="profile">
-          <span>S</span>
+        <button className="profile" onClick={profile}>
+          {user.avatar ? <img src={user.avatar} alt="" /> : <span>{user.name.slice(0,1)}</span>}
           <div className="sidebar-label">
-            Mein Arbeitsplatz<small>Alles an einem Ort.</small>
+            {user.name}<small>Mein Profil</small>
           </div>
-        </div>
+        </button>
       </div>
     </aside>
   );

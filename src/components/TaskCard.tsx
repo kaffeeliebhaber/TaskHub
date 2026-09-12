@@ -5,7 +5,7 @@ import type { FocusNote } from "../domain/focus";
 import { useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { GripVertical } from "lucide-react";
-import type { Checklist as ChecklistModel, Task } from "../domain/model";
+import type { Checklist as ChecklistModel, Task, CardFeature } from "../domain/model";
 import { Checklist } from "./Checklist";
 export interface DragPreview {
   task: Task;
@@ -65,7 +65,9 @@ export function TaskCard({
   onCollapse,
   showImages = true,
   dependencies = [],
+  features,
 }: {
+  features?: Partial<Record<CardFeature, boolean>>;
   onCollapse: () => void;
   showImages?: boolean;
   dependencies?: Task[];
@@ -81,6 +83,7 @@ export function TaskCard({
   notes: FocusNote[];
   onChecklist: (edit: (list: ChecklistModel) => void) => Promise<boolean>;
 }) {
+  const enabled=(feature:CardFeature)=>features?.[feature]!==false;
   const ref = useRef<HTMLElement>(null);
   const pointer = useRef<
     | (DragPreview & {
@@ -220,9 +223,7 @@ export function TaskCard({
       >
         <div className="card-title-row">
           <h3>{task.title}</h3>
-          {!task.details?.collapsed && (
-            <PriorityText priority={task.priority} />
-          )}
+          {!task.details?.collapsed && enabled("priority") && <PriorityText priority={task.priority} />}
         </div>
         {!task.details?.collapsed && task.description && (
           <p>{task.description}</p>
@@ -235,7 +236,7 @@ export function TaskCard({
         }
         aria-expanded={!task.details?.collapsed}
         onClick={onCollapse}
-      >
+        hidden={!enabled("collapse")}>
         {task.details?.collapsed ? "⌄" : "⌃"}
       </button>
       {!task.details?.collapsed && (
@@ -251,7 +252,7 @@ export function TaskCard({
               : {dependencies.map((t) => t.title).join(", ")}
             </small>
           )}
-          {showImages && (
+          {enabled("images") && showImages && (
             <div className="card-images">
               {task.details?.images?.map((img) => (
                 <img key={img.id} src={img.data} alt={img.name} />
@@ -276,8 +277,8 @@ export function TaskCard({
             </a>
           ))}
           <GripVertical className="card-grip" size={13} />
-          <FocusNotes notes={notes} compact />
-          <Checklist value={task.checklist} update={onChecklist} />
+          {enabled("notes") && <FocusNotes notes={notes} compact />}
+          {enabled("checklist") && <Checklist value={task.checklist} update={onChecklist} />}
         </>
       )}
     </article>

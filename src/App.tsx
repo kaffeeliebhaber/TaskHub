@@ -47,10 +47,15 @@ import {
   removeProject,
   themeNames,
   themes,
+  cardFeatureNames,
+  featureEnabled,
+  type CardFeature,
   type Task,
   type Workspace,
 } from "./domain/model";
 import { Dialog } from "./components/Dialog";
+import { Members, Profile } from "./components/Account";
+import type { User } from "./data/account";
 type Modal =
   | {
       kind: "name";
@@ -67,7 +72,8 @@ type Modal =
   | { kind: "task"; task: Task }
   | { kind: "settings" }
   | null;
-export function App() {
+export function App({user,setUser}:{user:User;setUser:(u:User|null)=>void}) {
+  const [membersOpen,setMembersOpen]=useState(false),[profileOpen,setProfileOpen]=useState(false);
   const [archiveOpen, setArchiveOpen] = useState(false);
   const [dragPreview, setDragPreview] = useState<DragPreview | null>(null);
   const [columnDragPreview, setColumnDragPreview] =
@@ -170,6 +176,9 @@ export function App() {
         openProject={openProject}
         newProject={newProject}
         settings={() => setModal({ kind: "settings" })}
+        archive={() => setArchiveOpen(true)}
+        profile={() => setProfileOpen(true)}
+        user={user}
         preview={repository.preview}
       />
 
@@ -268,6 +277,7 @@ export function App() {
                 <FocusButton controller={focus} workspace={s} />
                 {board && (
                   <>
+                    <button onClick={() => setMembersOpen(true)}>Mitglieder</button>
                     <button onClick={() => setArchiveOpen(true)}>Archiv</button>
                     <button
                       onClick={() => {
@@ -434,6 +444,7 @@ export function App() {
                             <div className="cards">
                               {visible.map((t) => (
                                 <TaskCard
+                                  features={s.cardFeatures}
                                   key={t.id}
                                   task={t}
                                   showImages={s.showImages !== false}
@@ -672,14 +683,16 @@ export function App() {
         pending={pending}
         drop={drop}
       />
-      {archiveOpen && board && (
+      {archiveOpen && (
         <Archive
           workspace={s}
-          boardId={board.id}
+          boardId={board?.id}
           change={change}
           close={() => setArchiveOpen(false)}
         />
       )}
+      {profileOpen && <Profile user={user} setUser={setUser} close={() => setProfileOpen(false)} />}
+      {membersOpen && board && <Members user={user} boardId={board.id} close={() => setMembersOpen(false)} />}
       {modal?.kind === "name" && (
         <NameDialog
           key={modal.title + modal.initial}
@@ -755,16 +768,16 @@ export function App() {
       {modal?.kind === "settings" && (
         <Dialog title="Einstellungen" close={() => setModal(null)}>
           <div className="settings-section">
+            <h3>Sprache</h3>
+            <select aria-label="Sprache" value={s.language ?? "de"} onChange={e => { const language=e.currentTarget.value as "de"|"en"; void change(w=>{w.language=language}) }}><option value="de">Deutsch</option><option value="en">English</option></select>
+            <h3>Kartenfunktionen</h3><p className="muted">Deaktivierte Funktionen werden ausgeblendet. Inhalte bleiben gespeichert.</p>
+            <div className="feature-switches">{(Object.keys(cardFeatureNames) as CardFeature[]).map(key=><label key={key} className="check-label"><input type="checkbox" checked={featureEnabled(s,key)} onChange={e=>{const enabled=e.currentTarget.checked;void change(w=>{w.cardFeatures={...w.cardFeatures,[key]:enabled}})}} /> {cardFeatureNames[key]}</label>)}</div>
             <h3>Darstellung</h3>
             <label className="check-label">
               <input
                 type="checkbox"
                 checked={s.showImages !== false}
-                onChange={(e) =>
-                  void change((w) => {
-                    w.showImages = e.target.checked;
-                  })
-                }
+                onChange={(e) => { const showImages=e.currentTarget.checked; void change((w) => { w.showImages = showImages; }) }}
               />{" "}
               Bilder auf Karten anzeigen
             </label>

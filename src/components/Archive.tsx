@@ -10,7 +10,7 @@ export function Archive({
   close,
 }: {
   workspace: Workspace;
-  boardId: string;
+  boardId?: string;
   change: (edit: (s: Workspace) => void) => Promise<boolean>;
   close: () => void;
 }) {
@@ -19,7 +19,7 @@ export function Archive({
     [selected, setSelected] = useState<string[]>([]),
     [confirm, setConfirm] = useState(false),
     [busy, setBusy] = useState(false);
-  const columns = s.columns.filter((c) => c.boardId === boardId);
+  const columns = s.columns.filter((c) => !boardId || c.boardId === boardId);
   const rows = s.tasks.filter(
     (t) =>
       columns.some((c) => c.id === t.columnId) &&

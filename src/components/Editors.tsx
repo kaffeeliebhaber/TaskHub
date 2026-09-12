@@ -179,19 +179,6 @@ export function TaskEditor({
           />
         </label>
         <label>
-          Spalte
-          <select
-            value={columnId}
-            onChange={(e) => setColumnId(e.target.value)}
-          >
-            {columns.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.title}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label>
           Priorität
           <select
             aria-label="Priorität der Aufgabe"
@@ -225,29 +212,7 @@ export function TaskEditor({
           <button type="button" className="danger" onClick={remove}>
             Löschen
           </button>
-          {details.closedAt && (
-            <button
-              type="button"
-              disabled={busy || readingImages || !title.trim()}
-              onClick={async () => {
-                setBusy(true);
-                if (
-                  await save(
-                    title.trim(),
-                    description,
-                    columnId,
-                    priority,
-                    details,
-                  )
-                )
-                  archive();
-                else setError("Nicht gespeichert. Bitte Fehler prüfen.");
-                setBusy(false);
-              }}
-            >
-              Archivieren
-            </button>
-          )}
+          <button type="button" disabled={busy || readingImages || !title.trim()} onClick={async () => { setBusy(true); const archived={...details,closedAt:details.closedAt??new Date().toISOString()}; if(await save(title.trim(),description,columnId,priority,archived)) archive(); else setError("Nicht gespeichert. Bitte Fehler prüfen."); setBusy(false); }}>Abschließen & archivieren</button>
           <div className="spacer" />
           <button type="button" onClick={close}>
             Abbrechen

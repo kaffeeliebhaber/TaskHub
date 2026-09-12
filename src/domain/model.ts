@@ -72,6 +72,8 @@ export interface Task {
   updatedAt: string;
 }
 export interface Workspace {
+  language?: "de" | "en";
+  cardFeatures?: Partial<Record<CardFeature, boolean>>;
   showImages?: boolean;
   theme?: Theme;
   sidebarCollapsed?: boolean;
@@ -84,8 +86,12 @@ export interface Workspace {
   tasks: Task[];
   activeProjectId: string | null;
 }
+export const cardFeatureNames = { description: "Beschreibung", priority: "Priorität", checklist: "Checkliste", notes: "Focus-Notizen", images: "Bilder", links: "URLs", dependencies: "Abhängigkeiten", completion: "Abschlussstatus", collapse: "Karte einklappen", focus: "Focus-Timer" } as const;
+export type CardFeature = keyof typeof cardFeatureNames;
+export const featureEnabled = (s: Workspace, feature: CardFeature) => s.cardFeatures?.[feature] !== false;
 export const emptyWorkspace = (): Workspace => ({
   theme: "cyberpunk",
+  language: "de",
   revision: 0,
   projects: [],
   boards: [],

@@ -62,7 +62,9 @@ npm run dev
 
 Anschließend [http://localhost:1420](http://localhost:1420) öffnen. Das Board öffnet sich direkt. Die Landingpage bleibt unter `/landing` erreichbar.
 
-Die Browser-Vorschau verwendet einen eigenen Browserspeicher und greift nicht auf die SQLite-Daten der Desktop-App zu.
+Die Browser-Vorschau verwendet ebenfalls eine lokale SQLite-Datenbank. Beim ersten Start werden die Profile **Sascha** und **Jessica** angelegt; beide verwenden zunächst das Passwort `1234`. Bitte das Passwort anschließend über „Mein Profil“ ändern.
+
+Boards werden für ihren Eigentümer angelegt. Über den Button „Mitglieder“ kann der Eigentümer Jessica oder Sascha hinzufügen; danach sehen beide dasselbe Board und können darin arbeiten. Persönliche Einstellungen wie Sprache, Theme und Kartenfunktionen bleiben dabei pro Benutzer getrennt.
 
 ### Desktop-App unter Linux
 
