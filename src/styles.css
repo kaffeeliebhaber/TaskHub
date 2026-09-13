@@ -1244,3 +1244,101 @@ dialog::backdrop {
   color: inherit;
   opacity: 0.85;
 }
+.archive-overview {
+  padding-top: 8px;
+}
+.archive-toolbar {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+.archive-toolbar .large {
+  flex: 1;
+}
+.archive-toolbar > button {
+  margin-top: 8px;
+  white-space: nowrap;
+}
+.archive-filter-panel {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: 0 0 20px;
+  padding: 14px;
+  border: 1px solid #333541;
+  border-radius: 8px;
+  background: #1b1d23;
+}
+.archive-filter-panel button {
+  align-self: end;
+  justify-self: start;
+  font-size: 11px;
+}
+.archive-list-table {
+  border: 1px solid #353741;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #1b1d22;
+}
+.archive-list-head,
+.archive-list-row {
+  display: grid;
+  grid-template-columns: minmax(180px, 2fr) minmax(105px, .75fr) minmax(115px, .8fr) minmax(125px, .9fr);
+  gap: 16px;
+  align-items: center;
+}
+.archive-list-head {
+  padding: 10px 16px;
+  background: #24252c;
+  border-bottom: 1px solid #363843;
+  color: #969aa7;
+  font-size: 10px;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+.archive-list-row {
+  width: 100%;
+  min-height: 53px;
+  padding: 11px 16px;
+  border-radius: 0;
+  border-bottom: 1px solid #2f3139;
+  color: #bbbfc9;
+  font-size: 12px;
+  text-align: left;
+}
+.archive-list-row:last-child {
+  border-bottom: 0;
+}
+.archive-list-row:hover {
+  background: #282832;
+}
+.archive-task-name {
+  color: #e2e3e8;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.archive-list-row .priority-text {
+  font-size: 11px;
+}
+.archive-empty {
+  padding: 22px 16px;
+  margin: 0;
+}
+@media (max-width: 760px) {
+  .archive-toolbar {
+    display: block;
+  }
+  .archive-toolbar > button {
+    margin: -12px 0 18px;
+  }
+  .archive-filter-panel {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .archive-list-table {
+    overflow-x: auto;
+  }
+  .archive-list-head,
+  .archive-list-row {
+    min-width: 580px;
+  }
+}

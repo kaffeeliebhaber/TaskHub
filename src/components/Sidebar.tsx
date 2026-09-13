@@ -20,7 +20,6 @@ export function Sidebar({
   openProject,
   newProject,
   settings,
-  archive,
   profile,
   user,
   preview,
@@ -30,11 +29,10 @@ export function Sidebar({
   projects: Project[];
   activeId?: string;
   page: string;
-  navigate: (page: "projects" | "search") => void;
+  navigate: (page: "projects" | "search" | "archive") => void;
   openProject: (id: string) => void;
   newProject: () => void;
   settings: () => void;
-  archive: () => void;
   profile: () => void;
   user: { name: string; avatar?: string | null };
   preview: boolean;
@@ -84,7 +82,12 @@ export function Sidebar({
           <LayoutGrid size={17} />
           <span className="sidebar-label">{tr("Projekte")}</span>
         </button>
-        <button className="nav" aria-label={tr("Archiv")} title={tr("Archiv")} onClick={archive}>
+        <button
+          className={page === "archive" ? "nav active" : "nav"}
+          aria-label={tr("Archiv")}
+          title={tr("Archiv")}
+          onClick={() => navigate("archive")}
+        >
           <Folder size={17} /><span className="sidebar-label">{tr("Archiv")}</span>
         </button>
         <button

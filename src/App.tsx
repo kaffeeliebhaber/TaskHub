@@ -1,5 +1,5 @@
 import { exportCanvas } from "./data/external";
-import { Archive } from "./components/Archive";
+import { ArchivePage } from "./components/Archive";
 import { boardCanvas } from "./domain/taskTools";
 import { Sidebar } from "./components/Sidebar";
 import { PriorityFilter, PriorityBadge } from "./components/Priority";
@@ -76,7 +76,6 @@ type Modal =
   | null;
 export function App({user,setUser}:{user:User;setUser:(u:User|null)=>void}) {
   const [membersOpen,setMembersOpen]=useState(false),[profileOpen,setProfileOpen]=useState(false);
-  const [archiveOpen, setArchiveOpen] = useState(false);
   const [dragPreview, setDragPreview] = useState<DragPreview | null>(null);
   const [columnDragPreview, setColumnDragPreview] =
     useState<ColumnDragPreview | null>(null);
@@ -88,7 +87,7 @@ export function App({user,setUser}:{user:User;setUser:(u:User|null)=>void}) {
     error,
   } = useSyncExternalStore(store.subscribe, store.snapshot);
   useEffect(() => { setLanguage(s.language ?? "de"); }, [s.language]);
-  const [page, setPage] = useState<"board" | "projects" | "search">("board");
+  const [page, setPage] = useState<"board" | "projects" | "search" | "archive">("board");
   const [query, setQuery] = useState("");
   const [priorityFilter, setPriorityFilter] = useState<Priority | "all">("all");
   const focus = useFocus(s, store.change, error);
@@ -181,7 +180,6 @@ export function App({user,setUser}:{user:User;setUser:(u:User|null)=>void}) {
         openProject={openProject}
         newProject={newProject}
         settings={() => setModal({ kind: "settings" })}
-        archive={() => setArchiveOpen(true)}
         profile={() => setProfileOpen(true)}
         user={user}
         preview={repository.preview}
@@ -195,7 +193,9 @@ export function App({user,setUser}:{user:User;setUser:(u:User|null)=>void}) {
               ? (project?.name ?? "Willkommen")
               : page === "projects"
                 ? "Projekte"
-                : "Suche"}
+                : page === "search"
+                  ? "Suche"
+                  : "Archiv"}
           </span>
           <span className="save-status" role="status">
             {error ? (
@@ -240,7 +240,9 @@ export function App({user,setUser}:{user:User;setUser:(u:User|null)=>void}) {
                     ? (project?.name ?? "Platz für deine Projekte.")
                     : page === "projects"
                       ? "Deine Projekte"
-                      : "Alles wiederfinden."}
+                      : page === "search"
+                        ? "Alles wiederfinden."
+                        : "Archivierte Aufgaben"}
                 </h1>
                 {project && page === "board" && (
                   <details className="menu">
@@ -283,7 +285,7 @@ export function App({user,setUser}:{user:User;setUser:(u:User|null)=>void}) {
                 {board && (
                   <>
                     <button onClick={() => setMembersOpen(true)}>{tr("Mitglieder")}</button>
-                    <button onClick={() => setArchiveOpen(true)}>{tr("Archiv")}</button>
+                    <button onClick={() => setPage("archive")}>{tr("Archiv")}</button>
                     <button
                       onClick={() => {
                         void exportCanvas(boardCanvas(s, board.id))
@@ -630,6 +632,12 @@ export function App({user,setUser}:{user:User;setUser:(u:User|null)=>void}) {
                   <p>Keine Aufgaben gefunden.</p>
                 )}
               </div>
+            ) : page === "archive" ? (
+              <ArchivePage
+                workspace={s}
+                change={change}
+                openTask={(task) => setModal({ kind: "task", task })}
+              />
             ) : s.projects.length && page === "projects" ? (
               <div className="project-grid">
                 {s.projects.map((p, i) => {
@@ -688,14 +696,6 @@ export function App({user,setUser}:{user:User;setUser:(u:User|null)=>void}) {
         pending={pending}
         drop={drop}
       />
-      {archiveOpen && (
-        <Archive
-          workspace={s}
-          boardId={board?.id}
-          change={change}
-          close={() => setArchiveOpen(false)}
-        />
-      )}
       {profileOpen && <Profile user={user} setUser={setUser} close={() => setProfileOpen(false)} />}
       {membersOpen && board && <Members user={user} boardId={board.id} close={() => setMembersOpen(false)} />}
       {modal?.kind === "name" && (
