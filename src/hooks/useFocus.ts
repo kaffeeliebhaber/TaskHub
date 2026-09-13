@@ -23,22 +23,27 @@ export function useFocus(
       /* Sound is optional; the timer remains visual. */
     }
   };
-  const chime = () => {
+  const chime = async () => {
     try {
+      enableAudio();
       const ctx = audio.current;
-      if (!ctx || ctx.state !== "running") return;
-      [0, 0.3, 0.6].forEach((delay) => {
+      if (!ctx) return;
+      if (ctx.state !== "running") await ctx.resume();
+      const start = ctx.currentTime + 0.05;
+      [0, 0.42, 0.84].forEach((delay, index) => {
         const oscillator = ctx.createOscillator(),
           gain = ctx.createGain();
         oscillator.connect(gain);
         gain.connect(ctx.destination);
-        oscillator.frequency.value = delay ? 660 : 523;
-        const t = ctx.currentTime + delay;
+        oscillator.type = "sine";
+        oscillator.frequency.value = [523.25, 659.25, 783.99][index];
+        const t = start + delay;
         gain.gain.setValueAtTime(0, t);
-        gain.gain.linearRampToValueAtTime(0.18, t + 0.02);
-        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.3);
+        gain.gain.linearRampToValueAtTime(0.2, t + 0.025);
+        gain.gain.setValueAtTime(0.2, t + 0.19);
+        gain.gain.linearRampToValueAtTime(0, t + 0.31);
         oscillator.start(t);
-        oscillator.stop(t + 0.32);
+        oscillator.stop(t + 0.33);
       });
     } catch {
       /* Optional audio must not interrupt completion. */
@@ -86,7 +91,7 @@ export function useFocus(
       void change((w) => {
         if (w.focus?.id === f.id) changeFocus(w, "complete");
       }).then((ok) => {
-        if (ok) chime();
+        if (ok) void chime();
         else finishing.current = null;
       });
     }
@@ -107,10 +112,7 @@ export function useFocus(
     setSelectedTaskId,
     active,
     enableAudio,
-    testSound: () => {
-      enableAudio();
-      void audio.current?.resume().then(chime);
-    },
+    testSound: () => void chime(),
     selectTask: (taskId: string) => {
       if (!active) setSelectedTaskId(taskId);
       setDockOpen(true);

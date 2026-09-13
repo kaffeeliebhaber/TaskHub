@@ -92,7 +92,7 @@ export function App({user,setUser}:{user:User;setUser:(u:User|null)=>void}) {
   const [priorityFilter, setPriorityFilter] = useState<Priority | "all">("all");
   const focus = useFocus(s, store.change, error);
   const [modal, setModal] = useState<Modal>(null);
-  const [settingsTab, setSettingsTab] = useState<"general" | "themes" | "cards">("general");
+  const [settingsTab, setSettingsTab] = useState<"general" | "themes" | "cards" | "timer">("general");
   const [path, setPath] = useState("");
   const [adding, setAdding] = useState<string | null>(null);
   const [drop, setDrop] = useState<string | null>(null);
@@ -770,7 +770,7 @@ export function App({user,setUser}:{user:User;setUser:(u:User|null)=>void}) {
       )}
       {modal?.kind === "settings" && (
         <Dialog title="Einstellungen" close={() => setModal(null)}>
-          <div className="settings-tabs"><button className={settingsTab === "general" ? "primary" : ""} onClick={() => setSettingsTab("general")}>Allgemein</button><button className={settingsTab === "themes" ? "primary" : ""} onClick={() => setSettingsTab("themes")}>Themes</button><button className={settingsTab === "cards" ? "primary" : ""} onClick={() => setSettingsTab("cards")}>Karten</button></div>
+          <div className="settings-tabs"><button className={settingsTab === "general" ? "primary" : ""} onClick={() => setSettingsTab("general")}>Allgemein</button><button className={settingsTab === "themes" ? "primary" : ""} onClick={() => setSettingsTab("themes")}>Themes</button><button className={settingsTab === "cards" ? "primary" : ""} onClick={() => setSettingsTab("cards")}>Karten</button><button className={settingsTab === "timer" ? "primary" : ""} onClick={() => setSettingsTab("timer")}>Focus-Timer</button></div>
           {settingsTab === "general" && <div className="settings-section">
             <h3>{tr("Sprache")}</h3>
             <div className="language-select"><span>{s.language === "en" ? "🇬🇧" : "🇩🇪"}</span><select aria-label={tr("Sprache")} value={s.language ?? "de"} onChange={e => { const language=e.currentTarget.value as "de"|"en"; void change(w=>{w.language=language}) }}><option value="de">Deutsch</option><option value="en">English</option></select></div>
@@ -815,7 +815,8 @@ export function App({user,setUser}:{user:User;setUser:(u:User|null)=>void}) {
               ))}
             </div>
           </div>}
-          {settingsTab === "cards" && <div className="settings-section"><h3>{tr("Kartenfunktionen")}</h3><p className="muted">Deaktivierte Funktionen werden ausgeblendet. Inhalte bleiben gespeichert.</p><div className="feature-switches">{(Object.keys(cardFeatureNames) as CardFeature[]).map(key=><label key={key} className="check-label"><input type="checkbox" checked={featureEnabled(s,key)} onChange={e=>{const enabled=e.currentTarget.checked;void change(w=>{w.cardFeatures={...w.cardFeatures,[key]:enabled}})}} /> {cardFeatureNames[key]}</label>)}</div><h3>{tr("Darstellung")}</h3><label className="check-label"><input type="checkbox" checked={s.showImages !== false} onChange={(e) => { const showImages=e.currentTarget.checked; void change((w) => { w.showImages = showImages; }) }} /> {tr("Bilder auf Karten anzeigen")}</label><button onClick={focus.testSound}>Timer-Signalton testen</button></div>}
+          {settingsTab === "cards" && <div className="settings-section"><h3>{tr("Kartenfunktionen")}</h3><p className="muted">Deaktivierte Funktionen werden ausgeblendet. Inhalte bleiben gespeichert.</p><div className="feature-switches">{(Object.keys(cardFeatureNames) as CardFeature[]).map(key=><label key={key} className="check-label"><input type="checkbox" checked={featureEnabled(s,key)} onChange={e=>{const enabled=e.currentTarget.checked;void change(w=>{w.cardFeatures={...w.cardFeatures,[key]:enabled}})}} /> {cardFeatureNames[key]}</label>)}</div><h3>{tr("Darstellung")}</h3><label className="check-label"><input type="checkbox" checked={s.showImages !== false} onChange={(e) => { const showImages=e.currentTarget.checked; void change((w) => { w.showImages = showImages; }) }} /> {tr("Bilder auf Karten anzeigen")}</label></div>}
+          {settingsTab === "timer" && <div className="settings-section"><h3>Focus-Timer</h3><p className="muted">Der Focus-Timer signalisiert das Ende einer Focus-Zeit mit einer kurzen Dreitonfolge.</p><button className="primary" onClick={focus.testSound}>Timer-Signalton testen</button></div>}
           <button className="primary" onClick={() => setModal(null)}>
             Fertig
           </button>
