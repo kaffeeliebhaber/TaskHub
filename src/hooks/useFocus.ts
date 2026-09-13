@@ -23,28 +23,25 @@ export function useFocus(
       /* Sound is optional; the timer remains visual. */
     }
   };
-  const chime = async () => {
+  const chime = () => {
     try {
-      enableAudio();
       const ctx = audio.current;
-      if (!ctx) return;
-      if (ctx.state !== "running") await ctx.resume();
-      const start = ctx.currentTime + 0.05;
-      [0, 0.42, 0.84].forEach((delay, index) => {
-        const oscillator = ctx.createOscillator(),
-          gain = ctx.createGain();
-        oscillator.connect(gain);
-        gain.connect(ctx.destination);
-        oscillator.type = "sine";
-        oscillator.frequency.value = [523.25, 659.25, 783.99][index];
-        const t = start + delay;
-        gain.gain.setValueAtTime(0, t);
-        gain.gain.linearRampToValueAtTime(0.2, t + 0.025);
-        gain.gain.setValueAtTime(0.2, t + 0.19);
-        gain.gain.linearRampToValueAtTime(0, t + 0.31);
-        oscillator.start(t);
-        oscillator.stop(t + 0.33);
-      });
+      if (!ctx || ctx.state !== "running") return;
+      // A single oscillator with three gain pulses is more reliable than
+      // several short-lived nodes when the timer finishes in the background.
+      const oscillator = ctx.createOscillator(), gain = ctx.createGain();
+      oscillator.type = "sine";
+      oscillator.connect(gain); gain.connect(ctx.destination);
+      const start = ctx.currentTime + 0.04;
+      const pulse = (offset: number, frequency: number) => {
+        const at = start + offset;
+        oscillator.frequency.setValueAtTime(frequency, at);
+        gain.gain.setValueAtTime(0.001, at);
+        gain.gain.exponentialRampToValueAtTime(0.18, at + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.001, at + 0.27);
+      };
+      pulse(0, 523.25); pulse(0.3, 659.25); pulse(0.6, 659.25);
+      oscillator.start(start); oscillator.stop(start + 0.9);
     } catch {
       /* Optional audio must not interrupt completion. */
     }
@@ -88,11 +85,11 @@ export function useFocus(
       finishing.current !== f.id
     ) {
       finishing.current = f.id;
+      chime();
       void change((w) => {
         if (w.focus?.id === f.id) changeFocus(w, "complete");
       }).then((ok) => {
-        if (ok) void chime();
-        else finishing.current = null;
+        if (!ok) finishing.current = null;
       });
     }
   }, [f?.id, f?.status, remaining, error, change]);
@@ -112,7 +109,7 @@ export function useFocus(
     setSelectedTaskId,
     active,
     enableAudio,
-    testSound: () => void chime(),
+    testSound: () => { enableAudio(); window.setTimeout(chime, 40); },
     selectTask: (taskId: string) => {
       if (!active) setSelectedTaskId(taskId);
       setDockOpen(true);
