@@ -1,3 +1,4 @@
+fn default_show_images() -> bool { true }
 use rusqlite::{params, Connection, TransactionBehavior};
 use serde::{Deserialize, Serialize};
 use std::{collections::HashSet, path::Path};
@@ -69,7 +70,21 @@ pub struct Column {
 }
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct TaskImage { pub id: String, pub name: String, pub data: String }
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct TaskLink { pub id: String, pub title: String, pub url: String }
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields, default)]
+pub struct TaskDetails {
+ pub closed_at: Option<String>, pub archived_at: Option<String>, pub collapsed: bool,
+ pub dependencies: Vec<String>, pub images: Vec<TaskImage>, pub links: Vec<TaskLink>,
+}
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct Task {
+    #[serde(default)]
+    pub details: Option<TaskDetails>,
     #[serde(default = "default_priority")]
     pub priority: String,
     #[serde(default)]
@@ -85,6 +100,8 @@ pub struct Task {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct Workspace {
+    #[serde(default = "default_show_images")]
+    pub show_images: bool,
     #[serde(default = "default_theme")]
     pub theme: String,
     #[serde(default)]
@@ -163,6 +180,21 @@ impl Workspace {
             }
         }
         for task in &self.tasks {
+            if let Some(d) = &task.details {
+                if d.images.len() > 6 || d.images.iter().any(|i| i.data.len() > 2800000 || !["data:image/png;base64,", "data:image/jpeg;base64,", "data:image/webp;base64,", "data:image/gif;base64,"].iter().any(|p| i.data.starts_with(p))) || d.links.iter().any(|l| !(l.url.starts_with("https://") || l.url.starts_with("http://"))) {
+                    return Err("Ungültige Bilder oder Links.".into());
+                }
+                for dep in &d.dependencies {
+                    let source = self.tasks.iter().find(|t| &t.id == dep).ok_or("Abhängige Aufgabe fehlt.")?;
+                    let board = |id: &str| self.columns.iter().find(|c| c.id == id).map(|c| c.board_id.as_str());
+                    if board(&task.column_id) != board(&source.column_id) { return Err("Abhängigkeit außerhalb des Boards.".into()); }
+                    let mut pending = vec![dep.as_str()]; let mut visited = HashSet::new();
+                    while let Some(id) = pending.pop() {
+                        if id == task.id { return Err("Zyklische Abhängigkeit.".into()); }
+                        if visited.insert(id) { if let Some(d) = self.tasks.iter().find(|t| t.id == id).and_then(|t| t.details.as_ref()) { pending.extend(d.dependencies.iter().map(String::as_str)); } }
+                    }
+                }
+            }
             if let Some(list) = &task.checklist {
                 ids(list.items.iter().map(|item| item.id.as_str()))?;
                 if !valid_text(&list.title, 120)
@@ -211,16 +243,16 @@ impl Database {
         let version: u32 = conn
             .query_row("PRAGMA user_version", [], |r| r.get(0))
             .map_err(err)?;
-        if version > 4 {
+        if version > 5 {
             return Err("Diese Datenbank benötigt eine neuere TaskHub-Version.".into());
         }
-        if version > 0 && version < 4 && path != Path::new(":memory:") {
+        if version > 0 && version < 5 && path != Path::new(":memory:") {
             let stamp = std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
                 .map_err(err)?
                 .as_nanos();
             let backup = path.with_file_name(format!(
-                "{}.before-v4-{stamp}.bak",
+                "{}.before-v5-{stamp}.bak",
                 path.file_name().unwrap_or_default().to_string_lossy()
             ));
             conn.execute("VACUUM INTO ?1", [backup.to_string_lossy().as_ref()])
@@ -249,6 +281,9 @@ impl Database {
                 include_str!("migration_4.sql")
             ))
             .map_err(err)?;
+        }
+        if version < 5 {
+            conn.execute_batch("BEGIN IMMEDIATE; ALTER TABLE tasks ADD COLUMN details TEXT; ALTER TABLE metadata ADD COLUMN show_images INTEGER NOT NULL DEFAULT 1; PRAGMA user_version=5; COMMIT;").map_err(err)?;
         }
         Ok(Self { conn })
     }
@@ -292,13 +327,15 @@ impl Database {
                 collapsed: r.get(5)?
             })
         );
-        let tasks=read!("SELECT id,column_id,title,description,position,created_at,updated_at,checklist,priority FROM tasks ORDER BY position,id",|r|Ok(Task{priority:r.get(8)?,checklist: r.get::<_,Option<String>>(7)?.map(|json|serde_json::from_str(&json).map_err(|e|rusqlite::Error::FromSqlConversionFailure(7,rusqlite::types::Type::Text,Box::new(e)))).transpose()?,id:r.get(0)?,column_id:r.get(1)?,title:r.get(2)?,description:r.get(3)?,position:r.get(4)?,created_at:r.get(5)?,updated_at:r.get(6)?}));
+        let tasks=read!("SELECT id,column_id,title,description,position,created_at,updated_at,checklist,priority,details FROM tasks ORDER BY position,id",|r|Ok(Task{details:r.get::<_,Option<String>>(9)?.map(|json|serde_json::from_str(&json).map_err(|e|rusqlite::Error::FromSqlConversionFailure(9,rusqlite::types::Type::Text,Box::new(e)))).transpose()?.unwrap_or(None),priority:r.get(8)?,checklist: r.get::<_,Option<String>>(7)?.map(|json|serde_json::from_str(&json).map_err(|e|rusqlite::Error::FromSqlConversionFailure(7,rusqlite::types::Type::Text,Box::new(e)))).transpose()?,id:r.get(0)?,column_id:r.get(1)?,title:r.get(2)?,description:r.get(3)?,position:r.get(4)?,created_at:r.get(5)?,updated_at:r.get(6)?}));
         let focus = focus_json
             .map(|json| serde_json::from_str(&json).map_err(err))
             .transpose()?;
         let focus_notes=read!("SELECT id,session_id,task_id,task_title,text,created_at FROM focus_notes ORDER BY created_at,id",|r|Ok(FocusNote{id:r.get(0)?,session_id:r.get(1)?,task_id:r.get(2)?,task_title:r.get(3)?,text:r.get(4)?,created_at:r.get(5)?}));
+        let show_images = tx.query_row("SELECT show_images FROM metadata WHERE id=1", [], |r| r.get(0)).map_err(err)?;
         tx.commit().map_err(err)?;
         Ok(Workspace {
+            show_images,
             theme,
             sidebar_collapsed,
             focus,
@@ -337,6 +374,7 @@ impl Database {
         }
         for t in &state.tasks {
             tx.execute("INSERT INTO tasks (id,column_id,title,description,position,created_at,updated_at,checklist,priority) VALUES(?1,?2,?3,?4,?5,?6,?7,?8,?9) ON CONFLICT(id) DO UPDATE SET column_id=excluded.column_id,title=excluded.title,description=excluded.description,position=excluded.position,updated_at=excluded.updated_at,checklist=excluded.checklist,priority=excluded.priority",params![t.id,t.column_id,t.title,t.description,t.position,t.created_at,t.updated_at,t.checklist.as_ref().map(serde_json::to_string).transpose().map_err(err)?,t.priority]).map_err(err)?;
+            tx.execute("UPDATE tasks SET details=?1 WHERE id=?2",params![serde_json::to_string(&t.details).map_err(err)?,t.id]).map_err(err)?;
         }
         for n in &state.focus_notes {
             tx.execute("INSERT INTO focus_notes VALUES(?1,?2,?3,?4,?5,?6) ON CONFLICT(id) DO UPDATE SET task_id=excluded.task_id,task_title=excluded.task_title,text=excluded.text",params![n.id,n.session_id,n.task_id,n.task_title,n.text,n.created_at]).map_err(err)?;
@@ -385,6 +423,7 @@ impl Database {
                 }
             }
         }
+        tx.execute("UPDATE metadata SET show_images=?1 WHERE id=1", [state.show_images]).map_err(err)?;
         let next = revision + 1;
         tx.execute(
             "UPDATE metadata SET revision=?1,active_project_id=?2,sidebar_collapsed=?3,focus_state=?4,theme=?5 WHERE id=1",
@@ -400,6 +439,7 @@ mod tests {
     use super::*;
     fn sample() -> Workspace {
         Workspace {
+            show_images: true,
             theme: "cyberpunk".into(),
             sidebar_collapsed: false,
             focus: None,
@@ -424,6 +464,7 @@ mod tests {
                 collapsed: true,
             }],
             tasks: vec![Task {
+                details: None,
                 priority: "none".into(),
                 checklist: None,
                 id: "t".into(),
@@ -435,6 +476,30 @@ mod tests {
                 updated_at: "now".into(),
             }],
         }
+    }
+    #[test]
+    fn task_details_survive_reopen_and_v4_migration_is_backed_up() {
+        let dir=std::env::temp_dir().join(format!("taskhub-v5-{}",std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos()));
+        std::fs::create_dir(&dir).unwrap(); let path=dir.join("tasks.db");
+        {
+            let conn=Connection::open(&path).unwrap();
+            conn.execute_batch(include_str!("schema.sql")).unwrap();
+            conn.execute_batch("ALTER TABLE tasks ADD COLUMN checklist TEXT;").unwrap();
+            conn.execute_batch(include_str!("migration_3.sql")).unwrap();
+            conn.execute_batch(include_str!("migration_4.sql")).unwrap();
+        }
+        {
+            let mut db=Database::open(&path).unwrap(); let mut s=sample();
+            s.show_images=false;
+            s.tasks[0].details=Some(TaskDetails { closed_at:Some("2026-09-11T12:00:00Z".into()), archived_at:Some("2026-09-12T12:00:00Z".into()), collapsed:true, images:vec![TaskImage{id:"img".into(),name:"test.png".into(),data:"data:image/png;base64,YQ==".into()}],links:vec![TaskLink{id:"link".into(),title:"Example".into(),url:"https://example.com".into()}],..Default::default() });
+            db.save(&s).unwrap();
+        }
+        {
+            let mut db=Database::open(&path).unwrap(); let s=db.load().unwrap();
+            assert!(!s.show_images);let d=s.tasks[0].details.as_ref().unwrap();assert!(d.collapsed);assert!(d.archived_at.is_some());assert_eq!(d.images[0].name,"test.png");assert_eq!(d.links[0].url,"https://example.com");
+        }
+        assert!(std::fs::read_dir(&dir).unwrap().any(|e| e.unwrap().path().extension().is_some_and(|e| e=="bak")));
+        std::fs::remove_dir_all(dir).unwrap();
     }
     #[test]
     fn roundtrip_restart_and_delete() {
@@ -546,7 +611,7 @@ mod tests {
                 db.conn
                     .query_row("PRAGMA user_version", [], |r| r.get::<_, u32>(0))
                     .unwrap(),
-                4
+                5
             );
         }
         std::fs::remove_file(path).unwrap();

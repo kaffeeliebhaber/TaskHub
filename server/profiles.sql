@@ -1,0 +1,6 @@
+PRAGMA foreign_keys=ON;
+CREATE TABLE IF NOT EXISTS users (id TEXT PRIMARY KEY, name TEXT NOT NULL UNIQUE, salt BLOB NOT NULL, password_hash BLOB NOT NULL, avatar TEXT, failures INTEGER NOT NULL DEFAULT 0, locked_until INTEGER NOT NULL DEFAULT 0);
+CREATE TABLE IF NOT EXISTS sessions (token_hash TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id), expires INTEGER NOT NULL);
+CREATE TABLE IF NOT EXISTS personal_workspaces (user_id TEXT PRIMARY KEY REFERENCES users(id), data TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS shared_workspace (id INTEGER PRIMARY KEY CHECK(id=1), revision INTEGER NOT NULL DEFAULT 0, data TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS board_members (board_id TEXT NOT NULL, user_id TEXT NOT NULL REFERENCES users(id), role TEXT NOT NULL CHECK(role IN ('owner','editor')), PRIMARY KEY(board_id,user_id));

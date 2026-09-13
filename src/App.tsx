@@ -1,3 +1,6 @@
+import { exportCanvas } from "./data/external";
+import { ArchivePage } from "./components/Archive";
+import { boardCanvas } from "./domain/taskTools";
 import { Sidebar } from "./components/Sidebar";
 import { PriorityFilter, PriorityBadge } from "./components/Priority";
 import { FocusButton, FocusTimer } from "./components/FocusTimer";
@@ -44,10 +47,17 @@ import {
   removeProject,
   themeNames,
   themes,
+  cardFeatureNames,
+  featureEnabled,
+  type CardFeature,
   type Task,
   type Workspace,
 } from "./domain/model";
 import { Dialog } from "./components/Dialog";
+import { setLanguage, tr } from "./i18n";
+import { focusSounds } from "./domain/focusSounds";
+import { Members, Profile } from "./components/Account";
+import type { User } from "./data/account";
 type Modal =
   | {
       kind: "name";
@@ -64,7 +74,8 @@ type Modal =
   | { kind: "task"; task: Task }
   | { kind: "settings" }
   | null;
-export function App() {
+export function App({user,setUser}:{user:User;setUser:(u:User|null)=>void}) {
+  const [membersOpen,setMembersOpen]=useState(false),[profileOpen,setProfileOpen]=useState(false);
   const [dragPreview, setDragPreview] = useState<DragPreview | null>(null);
   const [columnDragPreview, setColumnDragPreview] =
     useState<ColumnDragPreview | null>(null);
@@ -75,11 +86,14 @@ export function App() {
     pending,
     error,
   } = useSyncExternalStore(store.subscribe, store.snapshot);
-  const [page, setPage] = useState<"board" | "projects" | "search">("board");
+  useEffect(() => { setLanguage(s.language ?? "de"); }, [s.language]);
+  const [page, setPage] = useState<"board" | "projects" | "search" | "archive">("board");
   const [query, setQuery] = useState("");
   const [priorityFilter, setPriorityFilter] = useState<Priority | "all">("all");
   const focus = useFocus(s, store.change, error);
   const [modal, setModal] = useState<Modal>(null);
+  const [settingsTab, setSettingsTab] = useState<"general" | "themes" | "cards" | "timer">("general");
+  const [timerVolume, setTimerVolume] = useState<number | null>(null);
   const [path, setPath] = useState("");
   const [adding, setAdding] = useState<string | null>(null);
   const [drop, setDrop] = useState<string | null>(null);
@@ -135,10 +149,11 @@ export function App() {
     edit: (w: Workspace) => void,
   ) => setModal({ kind: "delete", title, message, submit: () => change(edit) });
   const matches = (t: Task) =>
+    !t.details?.archivedAt &&
     matchesTask(t, query, priorityFilter, s.focusNotes);
   const filtering = !!query.trim() || priorityFilter !== "all";
-  const boardTasks = s.tasks.filter((t) =>
-    columns.some((c) => c.id === t.columnId),
+  const boardTasks = s.tasks.filter(
+    (t) => !t.details?.archivedAt && columns.some((c) => c.id === t.columnId),
   );
   return (
     <div
@@ -165,6 +180,8 @@ export function App() {
         openProject={openProject}
         newProject={newProject}
         settings={() => setModal({ kind: "settings" })}
+        profile={() => setProfileOpen(true)}
+        user={user}
         preview={repository.preview}
       />
 
@@ -176,7 +193,9 @@ export function App() {
               ? (project?.name ?? "Willkommen")
               : page === "projects"
                 ? "Projekte"
-                : "Suche"}
+                : page === "search"
+                  ? "Suche"
+                  : "Archiv"}
           </span>
           <span className="save-status" role="status">
             {error ? (
@@ -221,7 +240,9 @@ export function App() {
                     ? (project?.name ?? "Platz für deine Projekte.")
                     : page === "projects"
                       ? "Deine Projekte"
-                      : "Alles wiederfinden."}
+                      : page === "search"
+                        ? "Alles wiederfinden."
+                        : "Archivierte Aufgaben"}
                 </h1>
                 {project && page === "board" && (
                   <details className="menu">
@@ -249,7 +270,7 @@ export function App() {
                         onClick={() =>
                           confirmDelete(
                             "Projekt löschen?",
-                            `„${project.name}“ mit allen Spalten und ${boardTasks.length} Aufgaben dauerhaft löschen?`,
+                            `„${project.name}“ mit allen Spalten und ${s.tasks.filter((t) => columns.some((c) => c.id === t.columnId)).length} Aufgaben einschließlich Archiv dauerhaft löschen?`,
                             (w) => removeProject(w, project.id),
                           )
                         }
@@ -261,6 +282,21 @@ export function App() {
                 )}
                 <div className="spacer" />
                 <FocusButton controller={focus} workspace={s} />
+                {board && (
+                  <>
+                    <button onClick={() => setMembersOpen(true)}>{tr("Mitglieder")}</button>
+                    <button onClick={() => setPage("archive")}>{tr("Archiv")}</button>
+                    <button
+                      onClick={() => {
+                        void exportCanvas(boardCanvas(s, board.id))
+                          .then((message) => window.alert(message))
+                          .catch((error) => window.alert(String(error)));
+                      }}
+                    >
+                      {tr("Obsidian exportieren")}
+                    </button>
+                  </>
+                )}
                 {(!project || page !== "board") && (
                   <button
                     className="primary"
@@ -325,7 +361,9 @@ export function App() {
                 <div className="board" aria-label={`Board ${project.name}`}>
                   {columns.map((c, i) => {
                     const tasks = ordered(
-                        s.tasks.filter((t) => t.columnId === c.id),
+                        s.tasks.filter(
+                          (t) => t.columnId === c.id && !t.details?.archivedAt,
+                        ),
                       ),
                       visible = tasks.filter(matches);
                     return (
@@ -397,7 +435,7 @@ export function App() {
                                   onClick={() =>
                                     confirmDelete(
                                       "Spalte löschen?",
-                                      `„${c.title}“ und ${tasks.length} Aufgaben dauerhaft löschen?`,
+                                      `„${c.title}“ und ${s.tasks.filter((t) => t.columnId === c.id).length} Aufgaben einschließlich Archiv dauerhaft löschen?`,
                                       (w) => removeColumn(w, c.id),
                                     )
                                   }
@@ -413,8 +451,23 @@ export function App() {
                             <div className="cards">
                               {visible.map((t) => (
                                 <TaskCard
+                                  features={s.cardFeatures}
                                   key={t.id}
                                   task={t}
+                                  showImages={s.showImages !== false}
+                                  dependencies={s.tasks.filter((d) =>
+                                    t.details?.dependencies?.includes(d.id),
+                                  )}
+                                  onCollapse={() =>
+                                    void change((w) => {
+                                      const task = w.tasks.find(
+                                        (x) => x.id === t.id,
+                                      )!;
+                                      task.details ??= {};
+                                      task.details.collapsed =
+                                        !task.details.collapsed;
+                                    })
+                                  }
                                   disabled={filtering}
                                   drop={drop}
                                   preview={dragPreview}
@@ -579,6 +632,12 @@ export function App() {
                   <p>Keine Aufgaben gefunden.</p>
                 )}
               </div>
+            ) : page === "archive" ? (
+              <ArchivePage
+                workspace={s}
+                change={change}
+                openTask={(task) => setModal({ kind: "task", task })}
+              />
             ) : s.projects.length && page === "projects" ? (
               <div className="project-grid">
                 {s.projects.map((p, i) => {
@@ -637,6 +696,8 @@ export function App() {
         pending={pending}
         drop={drop}
       />
+      {profileOpen && <Profile user={user} setUser={setUser} close={() => setProfileOpen(false)} />}
+      {membersOpen && board && <Members user={user} boardId={board.id} close={() => setMembersOpen(false)} />}
       {modal?.kind === "name" && (
         <NameDialog
           key={modal.title + modal.initial}
@@ -677,12 +738,23 @@ export function App() {
           columns={columns}
           close={() => setModal(null)}
           notes={notesForTask(s.focusNotes, modal.task)}
-          save={(title, description, columnId, priority) =>
+          workspace={s}
+          archive={() => {
+            void change((w) => {
+              const t = w.tasks.find((t) => t.id === modal.task.id)!;
+              if (t.details?.closedAt)
+                t.details.archivedAt = new Date().toISOString();
+            }).then((ok) => {
+              if (ok) setModal(null);
+            });
+          }}
+          save={(title, description, columnId, priority, details) =>
             change((w) => {
               const t = w.tasks.find((t) => t.id === modal.task.id)!;
               t.title = title;
               t.description = description;
               t.priority = priority;
+              t.details = details;
               t.updatedAt = new Date().toISOString();
               if (t.columnId !== columnId) moveTask(w, t.id, columnId);
             })
@@ -700,11 +772,14 @@ export function App() {
       )}
       {modal?.kind === "settings" && (
         <Dialog title="Einstellungen" close={() => setModal(null)}>
-          <div className="settings-section">
-            <h3>Darstellung</h3>
-            <p className="muted">
-              Wähle die Atmosphäre für deinen Arbeitsplatz.
-            </p>
+          <div className="settings-tabs"><button className={settingsTab === "general" ? "primary" : ""} onClick={() => setSettingsTab("general")}>Allgemein</button><button className={settingsTab === "themes" ? "primary" : ""} onClick={() => setSettingsTab("themes")}>Themes</button><button className={settingsTab === "cards" ? "primary" : ""} onClick={() => setSettingsTab("cards")}>Karten</button><button className={settingsTab === "timer" ? "primary" : ""} onClick={() => setSettingsTab("timer")}>Focus-Timer</button></div>
+          {settingsTab === "general" && <div className="settings-section">
+            <h3>{tr("Sprache")}</h3>
+            <div className="language-select"><span>{s.language === "en" ? "🇬🇧" : "🇩🇪"}</span><select aria-label={tr("Sprache")} value={s.language ?? "de"} onChange={e => { const language=e.currentTarget.value as "de"|"en"; void change(w=>{w.language=language}) }}><option value="de">Deutsch</option><option value="en">English</option></select></div>
+            <h3>Deine Daten bleiben bei dir.</h3><p>Projekte und Änderungen werden automatisch in einer lokalen SQLite-Datenbank gespeichert.</p><label>Speicherort</label><code>{path}</code>
+            <h3>TaskHub 0.1 · Aktuelle Features</h3><p>Projekte, Boards, Aufgaben, Checklisten, Prioritäten, Focus-Timer und Focus-Notizen sind verfügbar.</p>
+          </div>}
+          {settingsTab === "themes" && <div className="settings-section"><h3>Wähle die Atmosphäre für deinen Arbeitsplatz.</h3>
             <div
               className="theme-grid"
               role="radiogroup"
@@ -741,25 +816,9 @@ export function App() {
                 </button>
               ))}
             </div>
-          </div>
-          <div className="settings-section">
-            <h3>Deine Daten bleiben bei dir.</h3>
-            <p>
-              {repository.preview
-                ? "Diese Browser-Vorschau verwendet einen eigenen Speicher. Deine Desktop-Daten werden hier nicht angezeigt."
-                : "Projekte und Änderungen werden automatisch in einer lokalen SQLite-Datenbank gespeichert."}
-            </p>
-            <label>Speicherort</label>
-            <code>{path}</code>
-          </div>
-          <div className="settings-section">
-            <h3>TaskHub 0.1 · Focus-Teststand</h3>
-            <p>
-              Projekte, Boards, Aufgaben, Checklisten, Prioritäten, Focus-Timer
-              und Focus-Notizen sind verfügbar. Labels, Gruppen, Termine und
-              Backups folgen in den nächsten Ausbauschritten.
-            </p>
-          </div>
+          </div>}
+          {settingsTab === "cards" && <div className="settings-section"><h3>{tr("Kartenfunktionen")}</h3><p className="muted">Deaktivierte Funktionen werden ausgeblendet. Inhalte bleiben gespeichert.</p><div className="feature-switches">{(Object.keys(cardFeatureNames) as CardFeature[]).map(key=><label key={key} className="check-label"><input type="checkbox" checked={featureEnabled(s,key)} onChange={e=>{const enabled=e.currentTarget.checked;void change(w=>{w.cardFeatures={...w.cardFeatures,[key]:enabled}})}} /> {cardFeatureNames[key]}</label>)}</div><h3>{tr("Darstellung")}</h3><label className="check-label"><input type="checkbox" checked={s.showImages !== false} onChange={(e) => { const showImages=e.currentTarget.checked; void change((w) => { w.showImages = showImages; }) }} /> {tr("Bilder auf Karten anzeigen")}</label></div>}
+          {settingsTab === "timer" && <div className="settings-section"><h3>Focus-Timer</h3><p className="muted">Wähle einen lokalen Cozy-Chime für das Ende deiner Focus-Zeit.</p><label className="check-label timer-chime-toggle"><input type="checkbox" checked={s.focusChimeEnabled !== false} onChange={event => { const focusChimeEnabled=event.currentTarget.checked; void change(workspace => { workspace.focusChimeEnabled = focusChimeEnabled; }); }} /> Klang bei Ablauf abspielen</label><div className="sound-grid">{focusSounds.map(sound => { const selected=s.focusSound === sound.id || (!s.focusSound && sound.id === "amber"); return <button key={sound.id} className={selected ? "sound-choice selected" : "sound-choice"} onClick={() => void change(workspace => { workspace.focusSound = sound.id; })}><span><strong>{sound.name}</strong><i className="sound-check">{selected && <Check size={16} aria-label="Ausgewählt" />}</i></span><small>{sound.description}</small></button>})}</div><label className="timer-volume">Lautstärke <strong>{timerVolume ?? s.focusVolume ?? 55}%</strong><input type="range" min="0" max="100" step="1" value={timerVolume ?? s.focusVolume ?? 55} onChange={event => setTimerVolume(Number(event.currentTarget.value))} onPointerUp={event => { const focusVolume=Number((event.currentTarget as HTMLInputElement).value); setTimerVolume(null); void change(workspace => { workspace.focusVolume = focusVolume; }); }} onBlur={event => { if(timerVolume === null)return; const focusVolume=Number(event.currentTarget.value); setTimerVolume(null); void change(workspace => { workspace.focusVolume = focusVolume; }); }} /></label><p className="muted">Der Testton ist unabhängig davon jederzeit verfügbar.</p><button className="primary" onClick={focus.testSound}>Ausgewählten Klang testen</button></div>}
           <button className="primary" onClick={() => setModal(null)}>
             Fertig
           </button>

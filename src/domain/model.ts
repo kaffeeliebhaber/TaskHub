@@ -1,4 +1,6 @@
+import { canDepend, safeUrl } from "./taskTools";
 import type { FocusSession, FocusNote } from "./focus";
+import { focusSounds, type FocusSoundId } from "./focusSounds";
 export interface Project {
   id: string;
   name: string;
@@ -49,7 +51,17 @@ export const themeNames: Record<Theme, string> = {
   cyberpunk: "Cyberpunk",
   coffee: "Kaffee",
 };
+export interface TaskDetails {
+  closedAt?: string | null;
+  archivedAt?: string | null;
+  collapsed?: boolean;
+  dependencies?: string[];
+  links?: { id: string; url: string; title: string }[];
+  images?: { id: string; name: string; data: string }[];
+}
 export interface Task {
+  details?: TaskDetails;
+
   priority?: Priority;
   checklist?: Checklist | null;
   id: string;
@@ -61,6 +73,12 @@ export interface Task {
   updatedAt: string;
 }
 export interface Workspace {
+  focusVolume?: number;
+  focusSound?: FocusSoundId;
+  focusChimeEnabled?: boolean;
+  language?: "de" | "en";
+  cardFeatures?: Partial<Record<CardFeature, boolean>>;
+  showImages?: boolean;
   theme?: Theme;
   sidebarCollapsed?: boolean;
   focus?: FocusSession | null;
@@ -72,8 +90,15 @@ export interface Workspace {
   tasks: Task[];
   activeProjectId: string | null;
 }
+export const cardFeatureNames = { description: "Beschreibung", priority: "Priorität", checklist: "Checkliste", notes: "Focus-Notizen", images: "Bilder", links: "URLs", dependencies: "Abhängigkeiten", completion: "Abschlussstatus", collapse: "Karte einklappen", focus: "Focus-Timer" } as const;
+export type CardFeature = keyof typeof cardFeatureNames;
+export const featureEnabled = (s: Workspace, feature: CardFeature) => s.cardFeatures?.[feature] !== false;
 export const emptyWorkspace = (): Workspace => ({
   theme: "cyberpunk",
+  language: "de",
+  focusVolume: 55,
+  focusSound: "amber",
+  focusChimeEnabled: true,
   revision: 0,
   projects: [],
   boards: [],
@@ -184,6 +209,15 @@ export function removeProject(s: Workspace, projectId: string) {
     s.activeProjectId = s.projects[0]?.id ?? null;
 }
 export function validate(s: Workspace) {
+  if (s.focusVolume !== undefined && (!Number.isInteger(s.focusVolume) || s.focusVolume < 0 || s.focusVolume > 100))
+    throw new Error("Ungültige Focus-Lautstärke.");
+  if (s.focusSound !== undefined && !focusSounds.some(sound => sound.id === s.focusSound))
+    throw new Error("Ungültiger Focus-Klang.");
+  if (
+    s.focusChimeEnabled !== undefined &&
+    typeof s.focusChimeEnabled !== "boolean"
+  )
+    throw new Error("Ungültige Focus-Klangeinstellung.");
   if (s.theme !== undefined && !themes.includes(s.theme))
     throw new Error("Ungültiges Theme.");
   if (
@@ -226,6 +260,30 @@ export function validate(s: Workspace) {
   if (s.tasks.some((t) => !priorities.includes(t.priority ?? "none")))
     throw new Error("Ungültige Priorität.");
   for (const task of s.tasks) {
+    const d = task.details;
+    if (d) {
+      if (
+        (d.closedAt && !Number.isFinite(Date.parse(d.closedAt))) ||
+        (d.archivedAt && !Number.isFinite(Date.parse(d.archivedAt)))
+      )
+        throw Error("Ungültiges Abschlussdatum.");
+      if (d.links?.some((l) => !safeUrl(l.url)))
+        throw Error("Links benötigen http oder https.");
+      if (
+        (d.images?.length ?? 0) > 6 ||
+        d.images?.some(
+          (i) =>
+            !/^data:image\/(png|jpeg|webp|gif);base64,[A-Za-z0-9+/=]+$/.test(
+              i.data,
+            ) || i.data.length > 2800000,
+        )
+      )
+        throw Error("Ungültiges Bild.");
+      if (d.dependencies?.some((id) => !canDepend(s, task.id, id)))
+        throw Error(
+          "Abhängigkeiten müssen im selben Board liegen und dürfen keinen Kreis bilden.",
+        );
+    }
     const list = task.checklist;
     if (
       list &&

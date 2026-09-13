@@ -1,10 +1,11 @@
+import { openExternal } from "../data/external";
 import { PriorityText } from "./Priority";
 import { FocusNotes } from "./FocusNotes";
 import type { FocusNote } from "../domain/focus";
 import { useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { GripVertical } from "lucide-react";
-import type { Checklist as ChecklistModel, Task } from "../domain/model";
+import type { Checklist as ChecklistModel, Task, CardFeature } from "../domain/model";
 import { Checklist } from "./Checklist";
 export interface DragPreview {
   task: Task;
@@ -34,11 +35,17 @@ export function DragAvatar({ preview }: { preview: DragPreview | null }) {
       <div className="card-open">
         <div className="card-title-row">
           <h3>{preview.task.title}</h3>
-          <PriorityText priority={preview.task.priority} />
+          {!preview.task.details?.collapsed && (
+            <PriorityText priority={preview.task.priority} />
+          )}
         </div>
-        {preview.task.description && <p>{preview.task.description}</p>}
+        {!preview.task.details?.collapsed && preview.task.description && (
+          <p>{preview.task.description}</p>
+        )}
       </div>
-      <Checklist value={list} update={async () => false} />
+      {!preview.task.details?.collapsed && (
+        <Checklist value={list} update={async () => false} />
+      )}
     </div>,
     document.body,
   );
@@ -55,7 +62,15 @@ export function TaskCard({
   onChecklist,
   onFocus,
   notes,
+  onCollapse,
+  showImages = true,
+  dependencies = [],
+  features,
 }: {
+  features?: Partial<Record<CardFeature, boolean>>;
+  onCollapse: () => void;
+  showImages?: boolean;
+  dependencies?: Task[];
   task: Task;
   disabled: boolean;
   drop: string | null;
@@ -68,6 +83,7 @@ export function TaskCard({
   notes: FocusNote[];
   onChecklist: (edit: (list: ChecklistModel) => void) => Promise<boolean>;
 }) {
+  const enabled=(feature:CardFeature)=>features?.[feature]!==false;
   const ref = useRef<HTMLElement>(null);
   const pointer = useRef<
     | (DragPreview & {
@@ -122,7 +138,13 @@ export function TaskCard({
       data-task-id={task.id}
       className={`task-card ${drop === task.id ? "drop-target" : ""} ${preview?.task.id === task.id ? "drag-source" : ""}`}
       onPointerDown={(e) => {
-        if (e.button !== 0) return;
+        if (
+          e.button !== 0 ||
+          (e.target as HTMLElement).closest(
+            ".card-toggle, a, .checklist, .focus-notes",
+          )
+        )
+          return;
         suppressClick.current = false;
         const box = e.currentTarget.getBoundingClientRect();
         pointer.current = {
@@ -174,7 +196,11 @@ export function TaskCard({
         }
       }}
       onClick={(e) => {
-        if ((e.target as HTMLElement).closest(".checklist, .focus-notes"))
+        if (
+          (e.target as HTMLElement).closest(
+            ".checklist, .focus-notes, .card-toggle, a",
+          )
+        )
           return;
         if (suppressClick.current) {
           suppressClick.current = false;
@@ -197,13 +223,64 @@ export function TaskCard({
       >
         <div className="card-title-row">
           <h3>{task.title}</h3>
-          <PriorityText priority={task.priority} />
+          {!task.details?.collapsed && enabled("priority") && <PriorityText priority={task.priority} />}
         </div>
-        {task.description && <p>{task.description}</p>}
+        {!task.details?.collapsed && task.description && (
+          <p>{task.description}</p>
+        )}
       </div>
-      <GripVertical className="card-grip" size={13} />
-      <FocusNotes notes={notes} compact />
-      <Checklist value={task.checklist} update={onChecklist} />
+      <button
+        className="card-toggle"
+        aria-label={
+          task.details?.collapsed ? "Karte aufklappen" : "Karte einklappen"
+        }
+        aria-expanded={!task.details?.collapsed}
+        onClick={onCollapse}
+        hidden={!enabled("collapse")}>
+        {task.details?.collapsed ? "⌄" : "⌃"}
+      </button>
+      {!task.details?.collapsed && (
+        <>
+          {task.details?.closedAt && (
+            <small className="card-meta">✓ Abgeschlossen</small>
+          )}
+          {dependencies.length > 0 && (
+            <small className="card-meta">
+              {dependencies.some((t) => !t.details?.closedAt)
+                ? "↳ Wartet auf"
+                : "✓ Freigegeben"}
+              : {dependencies.map((t) => t.title).join(", ")}
+            </small>
+          )}
+          {enabled("images") && showImages && (
+            <div className="card-images">
+              {task.details?.images?.map((img) => (
+                <img key={img.id} src={img.data} alt={img.name} />
+              ))}
+            </div>
+          )}
+          {task.details?.links?.map((l) => (
+            <a
+              className="card-link"
+              key={l.id}
+              href={l.url}
+              onClick={(e) => {
+                e.preventDefault();
+                void openExternal(l.url).catch((error) =>
+                  window.alert(String(error)),
+                );
+              }}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              ↗ {l.title}
+            </a>
+          ))}
+          <GripVertical className="card-grip" size={13} />
+          {enabled("notes") && <FocusNotes notes={notes} compact />}
+          {enabled("checklist") && <Checklist value={task.checklist} update={onChecklist} />}
+        </>
+      )}
     </article>
   );
 }

@@ -1,5 +1,5 @@
-import { invoke, isTauri } from "@tauri-apps/api/core";
-import { emptyWorkspace, validate, type Workspace } from "../domain/model";
+import { api } from "./account";
+import { type Workspace } from "../domain/model";
 export interface WorkspaceRepository {
   load(): Promise<Workspace>;
   save(state: Workspace): Promise<number>;
@@ -9,42 +9,25 @@ export interface WorkspaceRepository {
 class DesktopRepository implements WorkspaceRepository {
   readonly preview = false;
   load() {
-    return invoke<Workspace>("load_workspace");
+    return api<Workspace>("workspace");
   }
   save(workspace: Workspace) {
-    return invoke<number>("save_workspace", { workspace });
+    return api<number>("workspace", workspace);
   }
   location() {
-    return invoke<string>("database_path");
+    return api<string>("location");
   }
 }
-// Explicit browser preview only. Desktop errors must never silently fall back here.
 class PreviewRepository implements WorkspaceRepository {
   readonly preview = true;
-  private key = "taskhub-preview-v1";
-  async load() {
-    const json = localStorage.getItem(this.key);
-    const state: Workspace = json ? JSON.parse(json) : emptyWorkspace();
-    validate(state);
-    return state;
+  load() {
+    return api<Workspace>("workspace");
   }
-  async save(state: Workspace) {
-    validate(state);
-    if ((await this.load()).revision !== state.revision)
-      throw new Error(
-        "Die Vorschau wurde in einem anderen Tab geändert. Bitte neu laden.",
-      );
-    const previous = localStorage.getItem(this.key);
-    if (previous && !localStorage.getItem("taskhub-preview-before-focus-v2"))
-      localStorage.setItem("taskhub-preview-before-focus-v2", previous);
-    const revision = state.revision + 1;
-    localStorage.setItem(this.key, JSON.stringify({ ...state, revision }));
-    return revision;
+  save(state: Workspace) {
+    return api<number>("workspace", state);
   }
   async location() {
-    return "Browser-Vorschau · separat im lokalen Browserspeicher";
+    return "Lokale SQLite-Datenbank";
   }
 }
-export const repository: WorkspaceRepository = isTauri()
-  ? new DesktopRepository()
-  : new PreviewRepository();
+export const repository: WorkspaceRepository = typeof window !== "undefined" && "__TAURI_INTERNALS__" in window ? new DesktopRepository() : new PreviewRepository();
