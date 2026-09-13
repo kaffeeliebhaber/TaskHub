@@ -1,62 +1,82 @@
 <div align="center">
 
-![TaskHub – Weniger verwalten. Mehr erledigen.](docs/assets/taskhub-hero.svg)
+![TaskHub — less organising, more doing](docs/assets/taskhub-hero.svg)
 
 # TaskHub
 
-**Ein lokaler, ruhiger Arbeitsplatz für Projekte, Aufgaben und konzentriertes Arbeiten.**
+**A calm, local workspace for projects, tasks, and focused work.**
 
-[![Status](https://img.shields.io/badge/Status-0.1%20Preview-a99af4?style=flat-square)](#projektstatus)
+[![Status](https://img.shields.io/badge/status-0.1%20preview-a99af4?style=flat-square)](#project-status)
 [![Tauri](https://img.shields.io/badge/Tauri-2-24c8db?style=flat-square&logo=tauri&logoColor=white)](https://v2.tauri.app/)
 [![React](https://img.shields.io/badge/React-19-20232a?style=flat-square&logo=react)](https://react.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5-3178c6?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![SQLite](https://img.shields.io/badge/SQLite-local--first-07405e?style=flat-square&logo=sqlite&logoColor=white)](https://sqlite.org/)
 
-[Features](#features) · [Starten](#lokal-starten) · [Architektur](#architektur) · [Roadmap](#roadmap)
+[Features](#features) · [Get started](#get-started-locally) · [Architecture](#architecture) · [Roadmap](#roadmap)
 
 </div>
 
 ---
 
-TaskHub verbindet ein frei anpassbares Kanban-Board mit einem Focus-Timer. Ideen werden zu Karten, Karten zu sichtbaren nächsten Schritten und eine Aufgabe kann für eine Focus-Session in den Mittelpunkt rücken. Der aktuelle Stand ist als lokale Desktop-App für Linux gedacht und berücksichtigt Windows von Anfang an.
+TaskHub brings a flexible Kanban board and a built-in focus timer into one desktop workspace. Capture an idea, turn it into a visible next step, and bring a single task into focus when it is time to work. The current release is local-first, built primarily for Linux with Windows compatibility in mind.
 
 > [!NOTE]
-> TaskHub ist aktuell eine **0.1 Preview**. Die App eignet sich zum Testen der Kernidee, ist aber noch kein fertiges Release.
+> TaskHub is an active **0.1 preview**. It is ready for hands-on testing, but it is not a finished release yet.
+
+## See TaskHub in action
+
+### Flexible boards
+
+Create projects, shape columns around your workflow, and move tasks or entire columns with direct drag and drop.
+
+![TaskHub board with flexible workflow columns](docs/assets/screenshots/board.png)
+
+### Focus without context switching
+
+Drag a task into the Focus Timer, choose a duration, work through its checklist, and write notes without leaving the task behind.
+
+![TaskHub Focus Timer with a selected task and notes](docs/assets/screenshots/focus-timer.png)
+
+### Archive with context
+
+Search completed work across projects, filter it, restore selected tasks, or remove them permanently when they are no longer useful.
+
+![TaskHub archive list with project, priority, and completion data](docs/assets/screenshots/archive.png)
 
 ## Features
 
-| | Funktion | Nutzen |
+| | Feature | Why it helps |
 |---|---|---|
-| 🗂️ | **Projekte und Boards** | Jedes Projekt besitzt sein eigenes Board mit frei benennbaren Spalten. |
-| ✨ | **Drag & Drop** | Aufgaben und ganze Spalten lassen sich direkt am Cursor verschieben. |
-| ✅ | **Aufgabenkarten** | Beschreibungen, Checklisten, Prioritäten, Links, Bilder, Abhängigkeiten und Focus-Notizen. |
-| 🔎 | **Suche und Filter** | Projektübergreifend nach Aufgaben suchen und nach Priorität filtern. |
-| 🗄️ | **Archiv** | Abgeschlossene Aufgaben durchsuchen, filtern, markieren und dauerhaft löschen. |
-| ⏱️ | **Focus-Timer** | Aufgabe hineinziehen, Zeit wählen, Checkliste abhaken und Notizen festhalten. |
-| 🔔 | **Cozy-Chimes** | Klang, Lautstärke und Ablaufklang des Timers individuell einstellen. |
-| 👥 | **Gemeinsame Boards** | Mitglieder zu Boards hinzufügen und gemeinsam daran arbeiten. |
-| 🎨 | **Vier Themes** | Cyberpunk, Hell, Dunkel und Kaffee. |
-| 🔒 | **Lokale Speicherung** | Workspace-Daten werden automatisch lokal persistiert. |
+| 🗂️ | **Projects and boards** | Every project has its own board with freely named columns. |
+| ✨ | **Direct drag and drop** | Move tasks and whole columns while they stay visually attached to the cursor. |
+| ✅ | **Rich task cards** | Descriptions, checklists, priorities, links, images, dependencies, and focus notes. |
+| 🔎 | **Search and filters** | Find tasks across projects and filter them by priority. |
+| 🗄️ | **Archive** | Search, filter, select, restore, or permanently remove completed work. |
+| ⏱️ | **Focus Timer** | Pull in a task, keep its checklist visible, and capture notes during a session. |
+| 🔔 | **Cozy chimes** | Choose the timer sound, its volume, and whether a chime plays when time runs out. |
+| 👥 | **Shared boards** | Invite members to a board and work on it together. Only its creator can delete it. |
+| 🎨 | **Four themes** | Cyberpunk, Light, Dark, and Coffee. |
+| 🔒 | **Local persistence** | Workspace data is saved automatically on your own device. |
 
-## Ein Workflow, der bei der Aufgabe bleibt
+## A workflow that stays with the task
 
 ```text
-Projekt anlegen  →  Karten ordnen  →  Aufgabe wählen  →  Focus-Zeit starten
-      ↑                                                        │
-      └───── Checkliste, Notizen und Fortschritt bleiben ─────┘
+Create a project  →  organise cards  →  choose a task  →  start a focus session
+       ↑                                                              │
+       └────────── checklist, notes, and progress stay connected ────┘
 ```
 
-Im Archiv durchsucht die Volltextsuche auch Beschreibungen, Checklisten, URLs, Bildnamen und Focus-Notizen. So bleiben selbst ältere Gedanken wieder auffindbar.
+Archive search also looks through descriptions, checklist entries, URLs, image names, and Focus Notes. Older decisions remain easy to find.
 
-## Lokal starten
+## Get started locally
 
-### Voraussetzungen
+### Requirements
 
-- [Node.js](https://nodejs.org/) **22 oder neuer**
-- npm (wird mit Node.js installiert)
-- Für die Desktop-App zusätzlich Rust Stable, Cargo und die [Tauri-Systemvoraussetzungen](https://v2.tauri.app/start/prerequisites/)
+- [Node.js](https://nodejs.org/) **22 or newer**
+- npm, included with Node.js
+- For the desktop app: Rust Stable, Cargo, and the [Tauri system prerequisites](https://v2.tauri.app/start/prerequisites/)
 
-### Browser-Vorschau
+### Browser preview
 
 ```bash
 git clone https://github.com/kaffeeliebhaber/TaskHub.git
@@ -65,13 +85,13 @@ npm ci
 npm run dev
 ```
 
-Danach im Browser [http://localhost:1420](http://localhost:1420) öffnen. Die Vorschau ist nur auf dem eigenen Computer erreichbar. Die Landingpage befindet sich unter `/landing`.
+Open [http://localhost:1420](http://localhost:1420). The preview is available only on your own computer. The landing page is available at `/landing`.
 
-Beim ersten Start wird ausschließlich das lokale Startkonto **Admin** angelegt. TaskHub fragt direkt nach einem eigenen Admin-Passwort; kein Standardpasswort ist im Repository hinterlegt. Weitere Benutzer werden über „Mitglieder“ angelegt.
+On the first launch, TaskHub creates only a local **Admin** account and asks you to define its password. No default password is stored in this repository. Create additional users from **Members** when needed.
 
-### Linux-Desktop-App
+### Linux desktop app
 
-Unter Ubuntu 24.04 oder Linux Mint werden üblicherweise diese Pakete benötigt:
+For Ubuntu 24.04 or Linux Mint, install the usual dependencies:
 
 ```bash
 sudo apt update
@@ -82,7 +102,7 @@ npm ci
 npm run tauri dev
 ```
 
-Ein installierbares Linux-Paket wird mit folgendem Befehl erstellt:
+Build local Linux packages with:
 
 ```bash
 npm run tauri build -- --bundles deb,appimage
@@ -90,7 +110,7 @@ npm run tauri build -- --bundles deb,appimage
 
 ### Windows
 
-Benötigt werden Node.js ab 22, Rust Stable mit MSVC-Toolchain, Microsoft C++ Build Tools und WebView2.
+Install Node.js 22+, Rust Stable with the MSVC toolchain, Microsoft C++ Build Tools, and WebView2.
 
 ```powershell
 npm ci
@@ -98,48 +118,48 @@ npm run tauri dev
 npm run tauri build -- --bundles nsis
 ```
 
-## Qualität prüfen
+## Quality checks
 
 ```bash
 npm run build
 npm test
 ```
 
-Die automatisierten Tests decken das Domänenmodell, Archiv- und Focus-Verhalten ab. Ergänzende Hinweise stehen in [TESTING.md](docs/TESTING.md).
+Automated tests cover the domain model, archive behaviour, and focus logic. See [TESTING.md](docs/TESTING.md) for further guidance.
 
-## Architektur
+## Architecture
 
 ```mermaid
 flowchart LR
     UI[React + TypeScript] --> Store[Workspace Store]
-    Store --> Repo[Repository-Schnittstelle]
-    Repo -->|Desktop-App| Tauri[Tauri 2 / Rust]
+    Store --> Repo[Repository interface]
+    Repo -->|Desktop app| Tauri[Tauri 2 / Rust]
     Tauri --> SQLite[(SQLite)]
-    Repo -->|Browser-Vorschau| Local[Lokaler Preview-Dienst]
+    Repo -->|Browser preview| Local[Local preview service]
 ```
 
-Die UI kennt nur die Repository-Schnittstelle. Dadurch bleiben Speicherung und Oberfläche getrennt und eine spätere Web-API oder Synchronisierung kann ergänzt werden, ohne die Karten- und Boardlogik neu zu schreiben. Details stehen in [ARCHITECTURE.md](docs/ARCHITECTURE.md).
+The UI depends on a repository interface rather than a storage implementation. This keeps the interface separate from persistence and leaves room for a future web API or synchronisation. More detail is available in [ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ## Roadmap
 
-- [x] Projekte, Boards, Aufgaben und frei definierbare Spalten
-- [x] Checklisten, Prioritäten, Suche, Archiv und Kartenfunktionen
-- [x] Focus-Timer mit Notizen, Checkliste und optionalem Ablaufklang
-- [x] Lokale Persistenz, Profile, Mitglieder und Themes
-- [x] Obsidian-Canvas-Export
-- [ ] Labels, Gruppen, Termine und weitere Filter
-- [ ] Backups und Wiederherstellung
-- [ ] Installationspakete für Linux und Windows
-- [ ] Optionale Web-Version mit Synchronisierung
+- [x] Projects, boards, tasks, and flexible columns
+- [x] Checklists, priorities, search, archive, and configurable cards
+- [x] Focus Timer with notes, checklists, and an optional completion chime
+- [x] Local persistence, profiles, members, and themes
+- [x] Obsidian Canvas export
+- [ ] Labels, groups, due dates, and advanced filters
+- [ ] Backups and restore flows
+- [ ] Installation packages for Linux and Windows
+- [ ] Optional web version and device synchronisation
 
-## Projektstatus
+## Project status
 
-TaskHub wird aktiv entwickelt. Feedback, konkrete Verbesserungsvorschläge und reproduzierbare Fehlerberichte helfen sehr. Wenn dir das Projekt gefällt, unterstützt ein **Star** auf GitHub die Sichtbarkeit.
+TaskHub is actively developed. Feedback, focused feature requests, and reproducible bug reports are welcome. If you like the idea, a GitHub **star** helps more people discover it.
 
 <div align="center">
 
-**Dein Tempo. Dein System.**
+**Your pace. Your system.**
 
-Gebaut mit Tauri, React, TypeScript und SQLite.
+Built with Tauri, React, TypeScript, and SQLite.
 
 </div>

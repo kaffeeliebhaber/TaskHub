@@ -1137,8 +1137,8 @@ dialog::backdrop {
   position: absolute;
   right: 4px;
   top: 0;
-  padding: 0 4px;
-  font-size: 12px;
+  padding: 0 5px;
+  font-size: 14px;
   opacity: 0.7;
   z-index: 2;
 }
