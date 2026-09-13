@@ -1,4 +1,4 @@
-import { Search } from "lucide-react";
+import { ChevronDown, Search, SlidersHorizontal } from "lucide-react";
 import { useMemo, useState } from "react";
 import { priorities, priorityNames, type Task, type Workspace } from "../domain/model";
 import { archiveMatches, emptyFilter } from "../domain/taskTools";
@@ -35,7 +35,9 @@ export function ArchivePage({
 }) {
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState(emptyFilter);
-  const [confirm, setConfirm] = useState(false);
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [selected, setSelected] = useState<string[]>([]);
+  const [confirm, setConfirm] = useState<"selected" | "matches" | null>(null);
   const [busy, setBusy] = useState(false);
   const columns = workspace.columns;
   const rows = useMemo(
@@ -54,9 +56,11 @@ export function ArchivePage({
     setQuery("");
     setFilter(emptyFilter);
   };
-  const deleteMatches = async () => {
+  const chosen = rows.filter((task) => selected.includes(task.id));
+  const targets = confirm === "selected" ? chosen : rows;
+  const deleteTasks = async () => {
     setBusy(true);
-    const ids = new Set(rows.map((task) => task.id));
+    const ids = new Set(targets.map((task) => task.id));
     const ok = await change((next) => {
       next.tasks = next.tasks.filter((task) => !ids.has(task.id));
       next.focusNotes = (next.focusNotes ?? []).filter(
@@ -64,7 +68,10 @@ export function ArchivePage({
       );
     });
     setBusy(false);
-    if (ok) setConfirm(false);
+    if (ok) {
+      setSelected((current) => current.filter((id) => !ids.has(id)));
+      setConfirm(null);
+    }
   };
 
   return (
@@ -80,62 +87,92 @@ export function ArchivePage({
             onChange={(event) => setQuery(event.target.value)}
           />
         </div>
-        <button
-          className="danger"
-          disabled={!rows.length}
-          onClick={() => setConfirm(true)}
-        >
-          {rows.length} Treffer dauerhaft löschen …
+        <button className="danger" disabled={!chosen.length} onClick={() => setConfirm("selected")}>
+          {chosen.length ? `${chosen.length} markierte löschen …` : "Markierte löschen …"}
         </button>
       </div>
 
-      <div className="archive-filters archive-filter-panel">
-        <label>
-          Spalte
-          <select
-            value={filter.column}
-            onChange={(event) => setFilter({ ...filter, column: event.target.value })}
-          >
-            <option value="">Alle Spalten</option>
-            {columns.map((column) => (
-              <option key={column.id} value={column.id}>
-                {column.title}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label>
-          Priorität
-          <select
-            value={filter.priority}
-            onChange={(event) => setFilter({ ...filter, priority: event.target.value })}
-          >
-            <option value="">Alle Prioritäten</option>
-            {priorities.map((priority) => (
-              <option key={priority} value={priority}>
-                {priorityNames[priority]}
-              </option>
-            ))}
-          </select>
-        </label>
-        {(["createdFrom", "createdTo", "closedFrom", "closedTo"] as const).map(
-          (key, index) => (
-            <label key={key}>
-              {["Erstellt ab", "Erstellt bis", "Geschlossen ab", "Geschlossen bis"][index]}
-              <input
-                type="date"
-                value={filter[key]}
-                onChange={(event) => setFilter({ ...filter, [key]: event.target.value })}
-              />
+      <div className="archive-filter-wrap">
+        <button
+          className="archive-filter-toggle"
+          aria-expanded={filtersOpen}
+          onClick={() => setFiltersOpen((open) => !open)}
+        >
+          <SlidersHorizontal size={15} />
+          Filter{hasFilters ? " aktiv" : ""}
+          <ChevronDown size={15} className={filtersOpen ? "rotated" : ""} />
+        </button>
+        {filtersOpen && (
+          <div className="archive-filters archive-filter-panel">
+            <label>
+              Spalte
+              <select
+                value={filter.column}
+                onChange={(event) => setFilter({ ...filter, column: event.target.value })}
+              >
+                <option value="">Alle Spalten</option>
+                {columns.map((column) => (
+                  <option key={column.id} value={column.id}>
+                    {column.title}
+                  </option>
+                ))}
+              </select>
             </label>
-          ),
+            <label>
+              Priorität
+              <select
+                value={filter.priority}
+                onChange={(event) => setFilter({ ...filter, priority: event.target.value })}
+              >
+                <option value="">Alle Prioritäten</option>
+                {priorities.map((priority) => (
+                  <option key={priority} value={priority}>
+                    {priorityNames[priority]}
+                  </option>
+                ))}
+              </select>
+            </label>
+            {(["createdFrom", "createdTo", "closedFrom", "closedTo"] as const).map(
+              (key, index) => (
+                <label key={key}>
+                  {["Erstellt ab", "Erstellt bis", "Geschlossen ab", "Geschlossen bis"][index]}
+                  <input
+                    type="date"
+                    value={filter[key]}
+                    onChange={(event) => setFilter({ ...filter, [key]: event.target.value })}
+                  />
+                </label>
+              ),
+            )}
+            {hasFilters && <button onClick={clearFilters}>Filter zurücksetzen</button>}
+            <button
+              className="danger archive-bulk-delete"
+              disabled={!rows.length}
+              onClick={() => setConfirm("matches")}
+            >
+              Alle {rows.length} Treffer löschen …
+            </button>
+          </div>
         )}
-        {hasFilters && <button onClick={clearFilters}>Filter zurücksetzen</button>}
       </div>
 
       <div className="archive-list-table" role="table" aria-label="Archivierte Aufgaben">
         <div className="archive-list-head" role="row">
-          <span>Name</span><span>Priorität</span><span>Erstellt am</span><span>Geschlossen am</span>
+          <span>
+            <input
+              aria-label="Alle Treffer markieren"
+              type="checkbox"
+              checked={!!rows.length && rows.every((task) => selected.includes(task.id))}
+              onChange={(event) =>
+                setSelected((current) =>
+                  event.target.checked
+                    ? [...new Set([...current, ...rows.map((task) => task.id)])]
+                    : current.filter((id) => !rows.some((task) => task.id === id)),
+                )
+              }
+            />
+            Name
+          </span><span>Priorität</span><span>Erstellt am</span><span>Geschlossen am</span>
         </div>
         {rows.map((task) => (
           <button
@@ -144,7 +181,22 @@ export function ArchivePage({
             onClick={() => openTask(task)}
             title="Aufgabe öffnen"
           >
-            <span className="archive-task-name">{task.title}</span>
+            <span className="archive-task-name">
+              <input
+                aria-label={`${task.title} markieren`}
+                type="checkbox"
+                checked={selected.includes(task.id)}
+                onClick={(event) => event.stopPropagation()}
+                onChange={(event) =>
+                  setSelected((current) =>
+                    event.target.checked
+                      ? [...current, task.id]
+                      : current.filter((id) => id !== task.id),
+                  )
+                }
+              />
+              {task.title}
+            </span>
             <span className={`priority-text priority-${task.priority ?? "none"}`}>
               {priorityNames[task.priority ?? "none"]}
             </span>
@@ -160,15 +212,15 @@ export function ArchivePage({
       </div>
 
       {confirm && (
-        <Dialog title="Archivierte Aufgaben endgültig löschen?" close={() => setConfirm(false)}>
+        <Dialog title="Archivierte Aufgaben endgültig löschen?" close={() => setConfirm(null)}>
           <p>
-            {rows.length} aktuell gefilterte Aufgaben werden mit ihren Bildern, Links,
+            {targets.length} {confirm === "selected" ? "markierte" : "aktuell gefilterte"} Aufgaben werden mit ihren Bildern, Links,
             Checklisten und Focus-Notizen unwiderruflich gelöscht.
           </p>
           <div className="dialog-actions">
-            <button onClick={() => setConfirm(false)}>Abbrechen</button>
-            <button className="destructive" disabled={busy} onClick={() => void deleteMatches()}>
-              {rows.length} Aufgaben endgültig löschen
+            <button onClick={() => setConfirm(null)}>Abbrechen</button>
+            <button className="destructive" disabled={busy} onClick={() => void deleteTasks()}>
+              {targets.length} Aufgaben endgültig löschen
             </button>
           </div>
         </Dialog>

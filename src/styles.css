@@ -1259,10 +1259,26 @@ dialog::backdrop {
   margin-top: 8px;
   white-space: nowrap;
 }
+.archive-filter-wrap {
+  margin: -8px 0 14px;
+}
+.archive-filter-toggle {
+  gap: 7px;
+  padding: 5px 8px;
+  color: #aaaebe;
+  font-size: 11px;
+}
+.archive-filter-toggle svg:last-child {
+  transition: transform .16s ease;
+}
+.archive-filter-toggle svg.rotated {
+  transform: rotate(180deg);
+}
 .archive-filter-panel {
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  margin: 0 0 20px;
-  padding: 14px;
+  gap: 4px 10px;
+  margin: 7px 0 0;
+  padding: 10px;
   border: 1px solid #333541;
   border-radius: 8px;
   background: #1b1d23;
@@ -1271,6 +1287,9 @@ dialog::backdrop {
   align-self: end;
   justify-self: start;
   font-size: 11px;
+}
+.archive-bulk-delete {
+  justify-self: end !important;
 }
 .archive-list-table {
   border: 1px solid #353741;
@@ -1319,6 +1338,19 @@ dialog::backdrop {
 }
 .archive-list-row .priority-text {
   font-size: 11px;
+}
+.archive-list-head span:first-child,
+.archive-task-name {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+.archive-list-table input[type="checkbox"] {
+  width: 14px;
+  height: 14px;
+  margin: 0;
+  accent-color: #a69bed;
+  flex: 0 0 auto;
 }
 .archive-empty {
   padding: 22px 16px;
