@@ -29,9 +29,19 @@ TaskHub brings a flexible Kanban board and a built-in focus timer into one deskt
 
 Create projects, shape columns around your workflow, and move tasks or entire columns with direct drag and drop.
 
+![TaskHub board with flexible workflow columns](docs/assets/screenshots/board.png)
+
 ### Focus without context switching
 
 Drag a task into the Focus Timer, choose a duration, work through its checklist, and write notes without leaving the task behind.
+
+![TaskHub Focus Timer with a selected task and notes](docs/assets/screenshots/focus-timer.png)
+
+### Archive with context
+
+Search completed work across projects, filter it, restore selected tasks, or remove them permanently when they are no longer useful.
+
+![TaskHub archive list with project, priority, and completion data](docs/assets/screenshots/archive.png)
 
 ## Features
 
