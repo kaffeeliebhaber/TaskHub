@@ -28,24 +28,37 @@ export function useFocus(
     try {
       const ctx = audio.current;
       if (!ctx || ctx.state !== "running") return;
-      // A single oscillator with several gain pulses is more reliable than
-      // several short-lived nodes when the timer finishes in the background.
-      const oscillator = ctx.createOscillator(), gain = ctx.createGain();
       const sound = focusSound(workspace.focusSound);
-      oscillator.type = sound.wave;
-      oscillator.connect(gain); gain.connect(ctx.destination);
       const start = ctx.currentTime + 0.04;
       const level = Math.max(0.001, ((workspace.focusVolume ?? 55) / 100) * 0.65);
+      const recipe = {
+        bell: { waves: ["sine", "sine"], harmonics: [1, 2.76], decay: 0.95 },
+        "music-box": { waves: ["triangle", "sine"], harmonics: [1, 2], decay: 0.62 },
+        wood: { waves: ["triangle", "sine"], harmonics: [1, 0.5], decay: 0.42 },
+        piano: { waves: ["triangle", "sine", "sine"], harmonics: [1, 2, 3], decay: 0.78 },
+        glass: { waves: ["sine", "sine"], harmonics: [1, 3.01], decay: 1.2 },
+        rain: { waves: ["sine", "triangle"], harmonics: [1, 1.5], decay: 0.36 },
+        pad: { waves: ["sine", "sine"], harmonics: [1, 1.005], decay: 1.35 },
+        pluck: { waves: ["triangle", "square"], harmonics: [1, 2], decay: 0.3 },
+        organ: { waves: ["sine", "sine", "sine"], harmonics: [1, 2, 3], decay: 1.05 },
+        marimba: { waves: ["triangle", "sine"], harmonics: [1, 3.5], decay: 0.5 },
+      } as const;
+      const instrument = recipe[sound.instrument];
       const pulse = (offset: number, frequency: number) => {
         const at = start + offset;
-        oscillator.frequency.setValueAtTime(frequency, at);
-        gain.gain.setValueAtTime(0.001, at);
-        gain.gain.exponentialRampToValueAtTime(level, at + 0.035);
-        gain.gain.setValueAtTime(level, at + 0.28);
-        gain.gain.exponentialRampToValueAtTime(0.001, at + 0.43);
+        instrument.harmonics.forEach((harmonic, index) => {
+          const oscillator = ctx.createOscillator(), gain = ctx.createGain();
+          oscillator.type = instrument.waves[index] as OscillatorType;
+          oscillator.frequency.setValueAtTime(frequency * harmonic, at);
+          oscillator.connect(gain); gain.connect(ctx.destination);
+          const partialLevel = level / instrument.harmonics.length * (index === 0 ? 1 : 0.42);
+          gain.gain.setValueAtTime(0.001, at);
+          gain.gain.exponentialRampToValueAtTime(partialLevel, at + 0.02);
+          gain.gain.exponentialRampToValueAtTime(0.001, at + instrument.decay);
+          oscillator.start(at); oscillator.stop(at + instrument.decay + 0.04);
+        });
       };
       sound.notes.forEach((note, index) => pulse(index * 0.5, note));
-      oscillator.start(start); oscillator.stop(start + sound.notes.length * 0.5);
     } catch {
       /* Optional audio must not interrupt completion. */
     }
