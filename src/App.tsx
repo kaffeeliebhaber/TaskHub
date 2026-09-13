@@ -92,6 +92,7 @@ export function App({user,setUser}:{user:User;setUser:(u:User|null)=>void}) {
   const [priorityFilter, setPriorityFilter] = useState<Priority | "all">("all");
   const focus = useFocus(s, store.change, error);
   const [modal, setModal] = useState<Modal>(null);
+  const [settingsTab, setSettingsTab] = useState<"general" | "themes" | "cards">("general");
   const [path, setPath] = useState("");
   const [adding, setAdding] = useState<string | null>(null);
   const [drop, setDrop] = useState<string | null>(null);
@@ -769,24 +770,14 @@ export function App({user,setUser}:{user:User;setUser:(u:User|null)=>void}) {
       )}
       {modal?.kind === "settings" && (
         <Dialog title="Einstellungen" close={() => setModal(null)}>
-          <div className="settings-section">
+          <div className="settings-tabs"><button className={settingsTab === "general" ? "primary" : ""} onClick={() => setSettingsTab("general")}>Allgemein</button><button className={settingsTab === "themes" ? "primary" : ""} onClick={() => setSettingsTab("themes")}>Themes</button><button className={settingsTab === "cards" ? "primary" : ""} onClick={() => setSettingsTab("cards")}>Karten</button></div>
+          {settingsTab === "general" && <div className="settings-section">
             <h3>{tr("Sprache")}</h3>
             <div className="language-select"><span>{s.language === "en" ? "🇬🇧" : "🇩🇪"}</span><select aria-label={tr("Sprache")} value={s.language ?? "de"} onChange={e => { const language=e.currentTarget.value as "de"|"en"; void change(w=>{w.language=language}) }}><option value="de">Deutsch</option><option value="en">English</option></select></div>
-            <h3>{tr("Kartenfunktionen")}</h3><p className="muted">Deaktivierte Funktionen werden ausgeblendet. Inhalte bleiben gespeichert.</p>
-            <div className="feature-switches">{(Object.keys(cardFeatureNames) as CardFeature[]).map(key=><label key={key} className="check-label"><input type="checkbox" checked={featureEnabled(s,key)} onChange={e=>{const enabled=e.currentTarget.checked;void change(w=>{w.cardFeatures={...w.cardFeatures,[key]:enabled}})}} /> {cardFeatureNames[key]}</label>)}</div>
-            <h3>{tr("Darstellung")}</h3>
-            <label className="check-label">
-              <input
-                type="checkbox"
-                checked={s.showImages !== false}
-                onChange={(e) => { const showImages=e.currentTarget.checked; void change((w) => { w.showImages = showImages; }) }}
-              />{" "}
-              {tr("Bilder auf Karten anzeigen")}
-            </label>
-            <button onClick={focus.testSound}>Timer-Signalton testen</button>
-            <p className="muted">
-              Wähle die Atmosphäre für deinen Arbeitsplatz.
-            </p>
+            <h3>Deine Daten bleiben bei dir.</h3><p>Projekte und Änderungen werden automatisch in einer lokalen SQLite-Datenbank gespeichert.</p><label>Speicherort</label><code>{path}</code>
+            <h3>TaskHub 0.1 · Aktuelle Features</h3><p>Projekte, Boards, Aufgaben, Checklisten, Prioritäten, Focus-Timer und Focus-Notizen sind verfügbar.</p>
+          </div>}
+          {settingsTab === "themes" && <div className="settings-section"><h3>Wähle die Atmosphäre für deinen Arbeitsplatz.</h3>
             <div
               className="theme-grid"
               role="radiogroup"
@@ -823,25 +814,8 @@ export function App({user,setUser}:{user:User;setUser:(u:User|null)=>void}) {
                 </button>
               ))}
             </div>
-          </div>
-          <div className="settings-section">
-            <h3>Deine Daten bleiben bei dir.</h3>
-            <p>
-              {repository.preview
-                ? "Diese Browser-Vorschau verwendet einen eigenen Speicher. Deine Desktop-Daten werden hier nicht angezeigt."
-                : "Projekte und Änderungen werden automatisch in einer lokalen SQLite-Datenbank gespeichert."}
-            </p>
-            <label>Speicherort</label>
-            <code>{path}</code>
-          </div>
-          <div className="settings-section">
-            <h3>TaskHub 0.1 · Focus-Teststand</h3>
-            <p>
-              Projekte, Boards, Aufgaben, Checklisten, Prioritäten, Focus-Timer
-              und Focus-Notizen sind verfügbar. Labels, Gruppen, Termine und
-              Backups folgen in den nächsten Ausbauschritten.
-            </p>
-          </div>
+          </div>}
+          {settingsTab === "cards" && <div className="settings-section"><h3>{tr("Kartenfunktionen")}</h3><p className="muted">Deaktivierte Funktionen werden ausgeblendet. Inhalte bleiben gespeichert.</p><div className="feature-switches">{(Object.keys(cardFeatureNames) as CardFeature[]).map(key=><label key={key} className="check-label"><input type="checkbox" checked={featureEnabled(s,key)} onChange={e=>{const enabled=e.currentTarget.checked;void change(w=>{w.cardFeatures={...w.cardFeatures,[key]:enabled}})}} /> {cardFeatureNames[key]}</label>)}</div><h3>{tr("Darstellung")}</h3><label className="check-label"><input type="checkbox" checked={s.showImages !== false} onChange={(e) => { const showImages=e.currentTarget.checked; void change((w) => { w.showImages = showImages; }) }} /> {tr("Bilder auf Karten anzeigen")}</label><button onClick={focus.testSound}>Timer-Signalton testen</button></div>}
           <button className="primary" onClick={() => setModal(null)}>
             Fertig
           </button>
