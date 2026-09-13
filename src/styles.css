@@ -1300,7 +1300,7 @@ dialog::backdrop {
 .archive-list-head,
 .archive-list-row {
   display: grid;
-  grid-template-columns: minmax(180px, 2fr) minmax(105px, .75fr) minmax(115px, .8fr) minmax(125px, .9fr);
+  grid-template-columns: minmax(180px, 1.8fr) minmax(130px, 1fr) minmax(105px, .75fr) minmax(115px, .8fr) minmax(125px, .9fr);
   gap: 16px;
   align-items: center;
 }
@@ -1374,6 +1374,6 @@ dialog::backdrop {
   }
   .archive-list-head,
   .archive-list-row {
-    min-width: 580px;
+    min-width: 720px;
   }
 }

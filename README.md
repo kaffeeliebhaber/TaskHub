@@ -67,7 +67,7 @@ npm run dev
 
 Danach im Browser [http://localhost:1420](http://localhost:1420) öffnen. Die Vorschau ist nur auf dem eigenen Computer erreichbar. Die Landingpage befindet sich unter `/landing`.
 
-Beim ersten Start werden die lokalen Testprofile **Sascha** und **Jessica** angelegt. Das anfängliche Passwort lautet jeweils `1234` und sollte anschließend im Profil geändert werden.
+Beim ersten Start wird ausschließlich das lokale Startkonto **Admin** angelegt. TaskHub fragt direkt nach einem eigenen Admin-Passwort; kein Standardpasswort ist im Repository hinterlegt. Weitere Benutzer werden über „Mitglieder“ angelegt.
 
 ### Linux-Desktop-App
 

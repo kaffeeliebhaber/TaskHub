@@ -3,19 +3,26 @@ import { api, type User } from "../data/account";
 import { Dialog } from "./Dialog";
 
 export function AccountGate({ children }: { children: (user: User, setUser: (user: User | null) => void) => ReactNode }) {
-  const [user, setUser] = useState<User | null>(null), [name, setName] = useState("Sascha"), [password, setPassword] = useState(""), [error, setError] = useState("");
-  useEffect(() => { void api<User>("me").then(setUser).catch(() => undefined); }, []);
+  const [user, setUser] = useState<User | null>(null), [name, setName] = useState("Admin"), [password, setPassword] = useState(""), [repeatPassword, setRepeatPassword] = useState(""), [setupRequired, setSetupRequired] = useState<boolean | null>(null), [error, setError] = useState("");
+  useEffect(() => { void api<User>("me").then(setUser).catch(() => undefined); void api<{ required: boolean }>("setup").then(data => setSetupRequired(data.required)).catch(() => setSetupRequired(false)); }, []);
   if (user) return <>{children(user, setUser)}</>;
+  if (setupRequired === null) return <main className="login-page"><p>TaskHub wird vorbereitet …</p></main>;
+  if (setupRequired) return <main className="login-page"><form onSubmit={async event => { event.preventDefault(); setError(""); if (password !== repeatPassword) return setError("Die Passwörter stimmen nicht überein."); try { setUser(await api<User>("setup", { password })); setPassword(""); setRepeatPassword(""); } catch (error) { setError(String(error)); } }}>
+    <span className="brand-mark">TH</span><h1>TaskHub einrichten</h1><p>Lege das Passwort für den lokalen Admin fest.</p>
+    <label>Benutzer<input value="Admin" readOnly /></label>
+    <label>Passwort<input type="password" minLength={4} value={password} onChange={event => setPassword(event.target.value)} required /></label>
+    <label>Passwort wiederholen<input type="password" minLength={4} value={repeatPassword} onChange={event => setRepeatPassword(event.target.value)} required /></label>{error && <p role="alert" className="danger">{error}</p>}<button className="primary">TaskHub starten</button>
+  </form></main>;
   return <main className="login-page"><form onSubmit={async event => { event.preventDefault(); setError(""); try { setUser(await api<User>("login", { name, password })); setPassword(""); } catch (error) { setError(String(error)); } }}>
     <span className="brand-mark">TH</span><h1>Willkommen bei TaskHub</h1><p>Deine Projekte. Dein Arbeitsplatz.</p>
-    <label>Benutzer<select value={name} onChange={event => setName(event.target.value)}><option>Sascha</option><option>Jessica</option></select></label>
+    <label>Benutzer<input required value={name} onChange={event => setName(event.target.value)} /></label>
     <label>Passwort<input type="password" value={password} onChange={event => setPassword(event.target.value)} required /></label>{error && <p role="alert" className="danger">{error}</p>}<button className="primary">Anmelden</button>
   </form></main>;
 }
 
 type MemberData = { members: Array<User & { role: "owner" | "editor" }>; users: User[]; suggested: User[] };
 export function Members({ boardId, user, close }: { boardId: string; user: User; close: () => void }) {
-  const [data, setData] = useState<MemberData | null>(null), [tab, setTab] = useState<"all" | "suggested" | "new">("all"), [query, setQuery] = useState(""), [name, setName] = useState(""), [password, setPassword] = useState("1234"), [error, setError] = useState("");
+  const [data, setData] = useState<MemberData | null>(null), [tab, setTab] = useState<"all" | "suggested" | "new">("all"), [query, setQuery] = useState(""), [name, setName] = useState(""), [password, setPassword] = useState(""), [error, setError] = useState("");
   const refresh = () => api<MemberData>("members", { boardId }).then(setData).catch(error => setError(String(error)));
   useEffect(() => { void refresh(); }, [boardId]);
   const candidates = useMemo(() => (tab === "suggested" ? data?.suggested ?? [] : data?.users ?? []).filter(candidate => !data?.members.some(member => member.id === candidate.id) && candidate.name.toLowerCase().includes(query.toLowerCase())), [data, query, tab]);
@@ -24,7 +31,7 @@ export function Members({ boardId, user, close }: { boardId: string; user: User;
     <div className="member-tabs"><button className={tab === "all" ? "primary" : ""} onClick={() => setTab("all")}>Alle Benutzer</button><button className={tab === "suggested" ? "primary" : ""} onClick={() => setTab("suggested")}>Vorschläge</button>{owner && <button className={tab === "new" ? "primary" : ""} onClick={() => setTab("new")}>Neuer Benutzer</button>}</div>
     <div className="member-list">{data?.members.map(member => <div className="member-row" key={member.id}><span className="member-avatar">{member.name.slice(0, 1)}</span><span>{member.name}<small>{member.role === "owner" ? "Eigentümer" : "Mitglied"}</small></span></div>)}</div>
     {owner && tab !== "new" && <><label className="member-search">Mitglieder suchen<input value={query} placeholder="Name eingeben …" onChange={event => setQuery(event.target.value)} /></label>{tab === "suggested" && <p className="muted">Personen, mit denen du bereits an anderen Boards arbeitest.</p>}<div className="member-candidates">{candidates.map(candidate => <button key={candidate.id} onClick={() => void api<MemberData>("invite", { boardId, userId: candidate.id }).then(setData)}><span>{candidate.name}</span><span>Hinzufügen</span></button>)}{!candidates.length && <p className="muted">Keine passenden Vorschläge.</p>}</div></>}
-    {owner && tab === "new" && <form className="member-create" onSubmit={async event => { event.preventDefault(); setError(""); try { const created = await api<User>("users", { name, password }); setName(""); setPassword("1234"); setData(await api<MemberData>("invite", { boardId, userId: created.id })); setTab("all"); } catch (error) { setError(String(error)); } }}><p className="muted">Der neue Benutzer wird direkt diesem Board hinzugefügt.</p><label>Name<input required minLength={2} maxLength={80} value={name} onChange={event => setName(event.target.value)} /></label><label>Startpasswort<input required minLength={4} type="password" value={password} onChange={event => setPassword(event.target.value)} /></label><button className="primary">Benutzer anlegen und hinzufügen</button></form>}
+    {owner && tab === "new" && <form className="member-create" onSubmit={async event => { event.preventDefault(); setError(""); try { const created = await api<User>("users", { name, password }); setName(""); setPassword(""); setData(await api<MemberData>("invite", { boardId, userId: created.id })); setTab("all"); } catch (error) { setError(String(error)); } }}><p className="muted">Der neue Benutzer wird direkt diesem Board hinzugefügt.</p><label>Name<input required minLength={2} maxLength={80} value={name} onChange={event => setName(event.target.value)} /></label><label>Startpasswort<input required minLength={4} type="password" value={password} onChange={event => setPassword(event.target.value)} /></label><button className="primary">Benutzer anlegen und hinzufügen</button></form>}
     {data && !owner && <p className="muted">Nur der Eigentümer dieses Boards kann weitere Benutzer anlegen oder einladen.</p>}
     {error && <p className="danger" role="alert">{error}</p>}
   </Dialog>;

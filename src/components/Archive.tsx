@@ -38,6 +38,7 @@ export function ArchivePage({
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [selected, setSelected] = useState<string[]>([]);
   const [confirm, setConfirm] = useState<"selected" | "matches" | null>(null);
+  const [restore, setRestore] = useState<{ projectId: string; columnId: string } | null>(null);
   const [busy, setBusy] = useState(false);
   const columns = workspace.columns;
   const rows = useMemo(
@@ -57,6 +58,30 @@ export function ArchivePage({
     setFilter(emptyFilter);
   };
   const chosen = rows.filter((task) => selected.includes(task.id));
+  const projectForTask = (task: Task) => {
+    const boardId = columns.find((column) => column.id === task.columnId)?.boardId;
+    const projectId = workspace.boards.find((board) => board.id === boardId)?.projectId;
+    return workspace.projects.find((project) => project.id === projectId);
+  };
+  const columnsForProject = (projectId: string) => {
+    const boardIds = new Set(
+      workspace.boards
+        .filter((board) => board.projectId === projectId)
+        .map((board) => board.id),
+    );
+    return columns.filter((column) => boardIds.has(column.boardId));
+  };
+  const openRestore = () => {
+    const first = chosen[0];
+    const projectId = first ? projectForTask(first)?.id ?? workspace.projects[0]?.id ?? "" : "";
+    const targetColumns = columnsForProject(projectId);
+    setRestore({
+      projectId,
+      columnId: first && targetColumns.some((column) => column.id === first.columnId)
+        ? first.columnId
+        : targetColumns[0]?.id ?? "",
+    });
+  };
   const targets = confirm === "selected" ? chosen : rows;
   const deleteTasks = async () => {
     setBusy(true);
@@ -73,6 +98,34 @@ export function ArchivePage({
       setConfirm(null);
     }
   };
+  const restoreTasks = async () => {
+    if (!restore?.columnId) return;
+    setBusy(true);
+    const ids = new Set(chosen.map((task) => task.id));
+    const ok = await change((next) => {
+      const nextPosition =
+        Math.max(
+          -1,
+          ...next.tasks
+            .filter((task) => task.columnId === restore.columnId && !ids.has(task.id))
+            .map((task) => task.position),
+        ) + 1;
+      next.tasks
+        .filter((task) => ids.has(task.id))
+        .forEach((task, index) => {
+          task.details ??= {};
+          task.details.archivedAt = null;
+          task.columnId = restore.columnId;
+          task.position = nextPosition + index;
+          task.updatedAt = new Date().toISOString();
+        });
+    });
+    setBusy(false);
+    if (ok) {
+      setSelected([]);
+      setRestore(null);
+    }
+  };
 
   return (
     <div className="overview archive-overview">
@@ -87,6 +140,9 @@ export function ArchivePage({
             onChange={(event) => setQuery(event.target.value)}
           />
         </div>
+        <button disabled={!chosen.length} onClick={openRestore}>
+          {chosen.length ? `${chosen.length} Markierte wiederherstellen` : "Markierte wiederherstellen"}
+        </button>
         <button className="danger" disabled={!chosen.length} onClick={() => setConfirm("selected")}>
           {chosen.length ? `${chosen.length} markierte löschen …` : "Markierte löschen …"}
         </button>
@@ -172,7 +228,7 @@ export function ArchivePage({
               }
             />
             Name
-          </span><span>Priorität</span><span>Erstellt am</span><span>Geschlossen am</span>
+          </span><span>Projekt</span><span>Priorität</span><span>Erstellt am</span><span>Geschlossen am</span>
         </div>
         {rows.map((task) => (
           <button
@@ -197,6 +253,7 @@ export function ArchivePage({
               />
               {task.title}
             </span>
+            <span>{projectForTask(task)?.name ?? "–"}</span>
             <span className={`priority-text priority-${task.priority ?? "none"}`}>
               {priorityNames[task.priority ?? "none"]}
             </span>
@@ -221,6 +278,48 @@ export function ArchivePage({
             <button onClick={() => setConfirm(null)}>Abbrechen</button>
             <button className="destructive" disabled={busy} onClick={() => void deleteTasks()}>
               {targets.length} Aufgaben endgültig löschen
+            </button>
+          </div>
+        </Dialog>
+      )}
+      {restore && (
+        <Dialog title="Aufgaben wiederherstellen" close={() => setRestore(null)}>
+          <p>
+            {chosen.length} markierte Aufgaben werden wieder im ausgewählten Projekt und
+            in der ausgewählten Spalte sichtbar.
+          </p>
+          <label>
+            Projekt
+            <select
+              value={restore.projectId}
+              onChange={(event) => {
+                const projectId = event.target.value;
+                setRestore({
+                  projectId,
+                  columnId: columnsForProject(projectId)[0]?.id ?? "",
+                });
+              }}
+            >
+              {workspace.projects.map((project) => (
+                <option key={project.id} value={project.id}>{project.name}</option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Spalte
+            <select
+              value={restore.columnId}
+              onChange={(event) => setRestore({ ...restore, columnId: event.target.value })}
+            >
+              {columnsForProject(restore.projectId).map((column) => (
+                <option key={column.id} value={column.id}>{column.title}</option>
+              ))}
+            </select>
+          </label>
+          <div className="dialog-actions">
+            <button onClick={() => setRestore(null)}>Abbrechen</button>
+            <button className="primary" disabled={busy || !restore.columnId} onClick={() => void restoreTasks()}>
+              Wiederherstellen
             </button>
           </div>
         </Dialog>
