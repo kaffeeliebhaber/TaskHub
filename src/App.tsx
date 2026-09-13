@@ -57,7 +57,7 @@ import { Dialog } from "./components/Dialog";
 import { setLanguage, tr } from "./i18n";
 import { focusSounds } from "./domain/focusSounds";
 import { Members, Profile } from "./components/Account";
-import type { User } from "./data/account";
+import { api, type User } from "./data/account";
 type Modal =
   | {
       kind: "name";
@@ -97,6 +97,7 @@ export function App({user,setUser}:{user:User;setUser:(u:User|null)=>void}) {
   const [path, setPath] = useState("");
   const [adding, setAdding] = useState<string | null>(null);
   const [drop, setDrop] = useState<string | null>(null);
+  const [boardOwner, setBoardOwner] = useState(false);
   useEffect(() => {
     void store.load();
     repository
@@ -117,6 +118,31 @@ export function App({user,setUser}:{user:User;setUser:(u:User|null)=>void}) {
     board = s.boards.find((b) => b.projectId === project?.id);
   const columns = ordered(s.columns.filter((c) => c.boardId === board?.id));
   const change = store.change;
+  useEffect(() => {
+    let active = true;
+    if (!board) {
+      setBoardOwner(false);
+      return;
+    }
+    void api<{ members: Array<{ id: string; role: "owner" | "editor" }> }>(
+      "members",
+      { boardId: board.id },
+    )
+      .then((data) => {
+        if (active)
+          setBoardOwner(
+            data.members.some(
+              (member) => member.id === user.id && member.role === "owner",
+            ),
+          );
+      })
+      .catch(() => {
+        if (active) setBoardOwner(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [board?.id, user.id]);
   const openProject = (projectId: string) => {
     void change((w) => {
       w.activeProjectId = projectId;
@@ -244,7 +270,7 @@ export function App({user,setUser}:{user:User;setUser:(u:User|null)=>void}) {
                         ? "Alles wiederfinden."
                         : "Archivierte Aufgaben"}
                 </h1>
-                {project && page === "board" && (
+                {project && page === "board" && boardOwner && (
                   <details className="menu">
                     <summary aria-label="Projektaktionen">
                       <MoreHorizontal size={20} />
@@ -269,13 +295,13 @@ export function App({user,setUser}:{user:User;setUser:(u:User|null)=>void}) {
                         className="danger"
                         onClick={() =>
                           confirmDelete(
-                            "Projekt löschen?",
-                            `„${project.name}“ mit allen Spalten und ${s.tasks.filter((t) => columns.some((c) => c.id === t.columnId)).length} Aufgaben einschließlich Archiv dauerhaft löschen?`,
+                            "Board löschen?",
+                            `„${project.name}“ mit allen Spalten und ${s.tasks.filter((t) => columns.some((c) => c.id === t.columnId)).length} Aufgaben einschließlich Archiv dauerhaft löschen? Alle Mitglieder verlieren den Zugriff auf dieses Board.`,
                             (w) => removeProject(w, project.id),
                           )
                         }
                       >
-                        Projekt löschen
+                        Board löschen
                       </button>
                     </div>
                   </details>
