@@ -75,6 +75,7 @@ export interface Task {
 export interface Workspace {
   focusVolume?: number;
   focusSound?: FocusSoundId;
+  focusChimeEnabled?: boolean;
   language?: "de" | "en";
   cardFeatures?: Partial<Record<CardFeature, boolean>>;
   showImages?: boolean;
@@ -97,6 +98,7 @@ export const emptyWorkspace = (): Workspace => ({
   language: "de",
   focusVolume: 55,
   focusSound: "amber",
+  focusChimeEnabled: true,
   revision: 0,
   projects: [],
   boards: [],
@@ -211,6 +213,11 @@ export function validate(s: Workspace) {
     throw new Error("Ungültige Focus-Lautstärke.");
   if (s.focusSound !== undefined && !focusSounds.some(sound => sound.id === s.focusSound))
     throw new Error("Ungültiger Focus-Klang.");
+  if (
+    s.focusChimeEnabled !== undefined &&
+    typeof s.focusChimeEnabled !== "boolean"
+  )
+    throw new Error("Ungültige Focus-Klangeinstellung.");
   if (s.theme !== undefined && !themes.includes(s.theme))
     throw new Error("Ungültiges Theme.");
   if (

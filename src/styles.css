@@ -1352,6 +1352,9 @@ dialog::backdrop {
   accent-color: #a69bed;
   flex: 0 0 auto;
 }
+.timer-chime-toggle {
+  margin: 14px 0 18px;
+}
 .archive-empty {
   padding: 22px 16px;
   margin: 0;

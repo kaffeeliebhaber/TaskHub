@@ -102,7 +102,7 @@ export function useFocus(
       finishing.current !== f.id
     ) {
       finishing.current = f.id;
-      chime();
+      if (workspace.focusChimeEnabled !== false) chime();
       void change((w) => {
         if (w.focus?.id === f.id) changeFocus(w, "complete");
       }).then((ok) => {
