@@ -27,21 +27,23 @@ export function useFocus(
     try {
       const ctx = audio.current;
       if (!ctx || ctx.state !== "running") return;
-      // A single oscillator with three gain pulses is more reliable than
+      // A single oscillator with several gain pulses is more reliable than
       // several short-lived nodes when the timer finishes in the background.
       const oscillator = ctx.createOscillator(), gain = ctx.createGain();
       oscillator.type = "sine";
       oscillator.connect(gain); gain.connect(ctx.destination);
       const start = ctx.currentTime + 0.04;
+      const level = Math.max(0.001, ((workspace.focusVolume ?? 55) / 100) * 0.65);
       const pulse = (offset: number, frequency: number) => {
         const at = start + offset;
         oscillator.frequency.setValueAtTime(frequency, at);
         gain.gain.setValueAtTime(0.001, at);
-        gain.gain.exponentialRampToValueAtTime(0.18, at + 0.02);
-        gain.gain.exponentialRampToValueAtTime(0.001, at + 0.27);
+        gain.gain.exponentialRampToValueAtTime(level, at + 0.035);
+        gain.gain.setValueAtTime(level, at + 0.28);
+        gain.gain.exponentialRampToValueAtTime(0.001, at + 0.43);
       };
-      pulse(0, 523.25); pulse(0.3, 659.25); pulse(0.6, 659.25);
-      oscillator.start(start); oscillator.stop(start + 0.9);
+      pulse(0, 523.25); pulse(0.48, 659.25); pulse(0.96, 659.25); pulse(1.44, 783.99); pulse(1.92, 659.25);
+      oscillator.start(start); oscillator.stop(start + 2.4);
     } catch {
       /* Optional audio must not interrupt completion. */
     }
@@ -109,7 +111,7 @@ export function useFocus(
     setSelectedTaskId,
     active,
     enableAudio,
-    testSound: () => { enableAudio(); window.setTimeout(chime, 40); },
+    testSound: () => { enableAudio(); window.setTimeout(chime, 160); },
     selectTask: (taskId: string) => {
       if (!active) setSelectedTaskId(taskId);
       setDockOpen(true);

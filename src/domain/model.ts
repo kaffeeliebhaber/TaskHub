@@ -72,6 +72,7 @@ export interface Task {
   updatedAt: string;
 }
 export interface Workspace {
+  focusVolume?: number;
   language?: "de" | "en";
   cardFeatures?: Partial<Record<CardFeature, boolean>>;
   showImages?: boolean;
@@ -92,6 +93,7 @@ export const featureEnabled = (s: Workspace, feature: CardFeature) => s.cardFeat
 export const emptyWorkspace = (): Workspace => ({
   theme: "cyberpunk",
   language: "de",
+  focusVolume: 55,
   revision: 0,
   projects: [],
   boards: [],
@@ -202,6 +204,8 @@ export function removeProject(s: Workspace, projectId: string) {
     s.activeProjectId = s.projects[0]?.id ?? null;
 }
 export function validate(s: Workspace) {
+  if (s.focusVolume !== undefined && (!Number.isInteger(s.focusVolume) || s.focusVolume < 0 || s.focusVolume > 100))
+    throw new Error("Ungültige Focus-Lautstärke.");
   if (s.theme !== undefined && !themes.includes(s.theme))
     throw new Error("Ungültiges Theme.");
   if (
