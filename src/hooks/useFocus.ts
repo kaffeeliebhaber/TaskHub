@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { changeFocus, focusRemaining } from "../domain/focus";
 import type { Workspace } from "../domain/model";
+import { focusSound } from "../domain/focusSounds";
 export function useFocus(
   workspace: Workspace,
   change: (edit: (w: Workspace) => void) => Promise<boolean>,
@@ -30,7 +31,8 @@ export function useFocus(
       // A single oscillator with several gain pulses is more reliable than
       // several short-lived nodes when the timer finishes in the background.
       const oscillator = ctx.createOscillator(), gain = ctx.createGain();
-      oscillator.type = "sine";
+      const sound = focusSound(workspace.focusSound);
+      oscillator.type = sound.wave;
       oscillator.connect(gain); gain.connect(ctx.destination);
       const start = ctx.currentTime + 0.04;
       const level = Math.max(0.001, ((workspace.focusVolume ?? 55) / 100) * 0.65);
@@ -42,8 +44,8 @@ export function useFocus(
         gain.gain.setValueAtTime(level, at + 0.28);
         gain.gain.exponentialRampToValueAtTime(0.001, at + 0.43);
       };
-      pulse(0, 523.25); pulse(0.48, 659.25); pulse(0.96, 659.25); pulse(1.44, 783.99); pulse(1.92, 659.25);
-      oscillator.start(start); oscillator.stop(start + 2.4);
+      sound.notes.forEach((note, index) => pulse(index * 0.5, note));
+      oscillator.start(start); oscillator.stop(start + sound.notes.length * 0.5);
     } catch {
       /* Optional audio must not interrupt completion. */
     }

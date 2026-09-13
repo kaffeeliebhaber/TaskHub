@@ -1,5 +1,6 @@
 import { canDepend, safeUrl } from "./taskTools";
 import type { FocusSession, FocusNote } from "./focus";
+import { focusSounds, type FocusSoundId } from "./focusSounds";
 export interface Project {
   id: string;
   name: string;
@@ -73,6 +74,7 @@ export interface Task {
 }
 export interface Workspace {
   focusVolume?: number;
+  focusSound?: FocusSoundId;
   language?: "de" | "en";
   cardFeatures?: Partial<Record<CardFeature, boolean>>;
   showImages?: boolean;
@@ -94,6 +96,7 @@ export const emptyWorkspace = (): Workspace => ({
   theme: "cyberpunk",
   language: "de",
   focusVolume: 55,
+  focusSound: "amber",
   revision: 0,
   projects: [],
   boards: [],
@@ -206,6 +209,8 @@ export function removeProject(s: Workspace, projectId: string) {
 export function validate(s: Workspace) {
   if (s.focusVolume !== undefined && (!Number.isInteger(s.focusVolume) || s.focusVolume < 0 || s.focusVolume > 100))
     throw new Error("Ungültige Focus-Lautstärke.");
+  if (s.focusSound !== undefined && !focusSounds.some(sound => sound.id === s.focusSound))
+    throw new Error("Ungültiger Focus-Klang.");
   if (s.theme !== undefined && !themes.includes(s.theme))
     throw new Error("Ungültiges Theme.");
   if (

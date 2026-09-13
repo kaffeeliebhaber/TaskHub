@@ -55,6 +55,7 @@ import {
 } from "./domain/model";
 import { Dialog } from "./components/Dialog";
 import { setLanguage, tr } from "./i18n";
+import { focusSounds } from "./domain/focusSounds";
 import { Members, Profile } from "./components/Account";
 import type { User } from "./data/account";
 type Modal =
@@ -816,7 +817,7 @@ export function App({user,setUser}:{user:User;setUser:(u:User|null)=>void}) {
             </div>
           </div>}
           {settingsTab === "cards" && <div className="settings-section"><h3>{tr("Kartenfunktionen")}</h3><p className="muted">Deaktivierte Funktionen werden ausgeblendet. Inhalte bleiben gespeichert.</p><div className="feature-switches">{(Object.keys(cardFeatureNames) as CardFeature[]).map(key=><label key={key} className="check-label"><input type="checkbox" checked={featureEnabled(s,key)} onChange={e=>{const enabled=e.currentTarget.checked;void change(w=>{w.cardFeatures={...w.cardFeatures,[key]:enabled}})}} /> {cardFeatureNames[key]}</label>)}</div><h3>{tr("Darstellung")}</h3><label className="check-label"><input type="checkbox" checked={s.showImages !== false} onChange={(e) => { const showImages=e.currentTarget.checked; void change((w) => { w.showImages = showImages; }) }} /> {tr("Bilder auf Karten anzeigen")}</label></div>}
-          {settingsTab === "timer" && <div className="settings-section"><h3>Focus-Timer</h3><p className="muted">Der Timer signalisiert das Ende einer Focus-Zeit mit einer gut hörbaren Tonfolge.</p><label className="timer-volume">Lautstärke <strong>{s.focusVolume ?? 55}%</strong><input type="range" min="0" max="100" step="1" value={s.focusVolume ?? 55} onChange={event => { const focusVolume=Number(event.currentTarget.value); void change(workspace => { workspace.focusVolume = focusVolume; }); }} /></label><p className="muted">Die Einstellung gilt auch für den Testton.</p><button className="primary" onClick={focus.testSound}>Timer-Signalton testen</button></div>}
+          {settingsTab === "timer" && <div className="settings-section"><h3>Focus-Timer</h3><p className="muted">Wähle einen lokalen Cozy-Chime für das Ende deiner Focus-Zeit.</p><div className="sound-grid">{focusSounds.map(sound => <button key={sound.id} className={s.focusSound === sound.id || (!s.focusSound && sound.id === "amber") ? "sound-choice selected" : "sound-choice"} onClick={() => void change(workspace => { workspace.focusSound = sound.id; })}><strong>{sound.name}</strong><small>{sound.description}</small></button>)}</div><label className="timer-volume">Lautstärke <strong>{s.focusVolume ?? 55}%</strong><input type="range" min="0" max="100" step="1" value={s.focusVolume ?? 55} onChange={event => { const focusVolume=Number(event.currentTarget.value); void change(workspace => { workspace.focusVolume = focusVolume; }); }} /></label><p className="muted">Die Einstellung gilt auch für den Testton.</p><button className="primary" onClick={focus.testSound}>Ausgewählten Klang testen</button></div>}
           <button className="primary" onClick={() => setModal(null)}>
             Fertig
           </button>
