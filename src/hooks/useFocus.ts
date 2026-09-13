@@ -58,7 +58,7 @@ export function useFocus(
           oscillator.start(at); oscillator.stop(at + instrument.decay + 0.04);
         });
       };
-      sound.notes.forEach((note, index) => pulse(index * 0.5, note));
+      sound.events.forEach(([offset, note]) => pulse(offset, note));
     } catch {
       /* Optional audio must not interrupt completion. */
     }
