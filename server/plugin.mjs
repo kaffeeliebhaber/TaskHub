@@ -19,7 +19,14 @@ export function profilesPlugin() {
           if (request.method === "POST") { let raw = ""; for await (const chunk of request) raw += chunk; body = JSON.parse(raw || "{}"); }
           const cookies = Object.fromEntries((request.headers.cookie || "").split(";").filter(Boolean).map(value => value.trim().split("=")));
           let data;
-          if (request.url === "/api/login") {
+          if (request.url === "/api/setup") {
+            if (request.method === "GET") data = { required: profiles.setupRequired() };
+            else {
+              const setup = profiles.setupAdmin(body.password);
+              response.setHeader("Set-Cookie", `taskhub_session=${setup.token}; HttpOnly; SameSite=Strict; Path=/; Max-Age=604800`);
+              data = setup.user;
+            }
+          } else if (request.url === "/api/login") {
             const login = profiles.login(body.name, body.password);
             response.setHeader("Set-Cookie", `taskhub_session=${login.token}; HttpOnly; SameSite=Strict; Path=/; Max-Age=604800`);
             data = login.user;
