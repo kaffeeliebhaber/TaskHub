@@ -54,6 +54,7 @@ import {
   type Workspace,
 } from "./domain/model";
 import { Dialog } from "./components/Dialog";
+import { setLanguage, tr } from "./i18n";
 import { Members, Profile } from "./components/Account";
 import type { User } from "./data/account";
 type Modal =
@@ -85,6 +86,7 @@ export function App({user,setUser}:{user:User;setUser:(u:User|null)=>void}) {
     pending,
     error,
   } = useSyncExternalStore(store.subscribe, store.snapshot);
+  useEffect(() => { setLanguage(s.language ?? "de"); }, [s.language]);
   const [page, setPage] = useState<"board" | "projects" | "search">("board");
   const [query, setQuery] = useState("");
   const [priorityFilter, setPriorityFilter] = useState<Priority | "all">("all");
@@ -277,8 +279,8 @@ export function App({user,setUser}:{user:User;setUser:(u:User|null)=>void}) {
                 <FocusButton controller={focus} workspace={s} />
                 {board && (
                   <>
-                    <button onClick={() => setMembersOpen(true)}>Mitglieder</button>
-                    <button onClick={() => setArchiveOpen(true)}>Archiv</button>
+                    <button onClick={() => setMembersOpen(true)}>{tr("Mitglieder")}</button>
+                    <button onClick={() => setArchiveOpen(true)}>{tr("Archiv")}</button>
                     <button
                       onClick={() => {
                         void exportCanvas(boardCanvas(s, board.id))
@@ -286,7 +288,7 @@ export function App({user,setUser}:{user:User;setUser:(u:User|null)=>void}) {
                           .catch((error) => window.alert(String(error)));
                       }}
                     >
-                      Obsidian exportieren
+                      {tr("Obsidian exportieren")}
                     </button>
                   </>
                 )}
@@ -768,18 +770,18 @@ export function App({user,setUser}:{user:User;setUser:(u:User|null)=>void}) {
       {modal?.kind === "settings" && (
         <Dialog title="Einstellungen" close={() => setModal(null)}>
           <div className="settings-section">
-            <h3>Sprache</h3>
-            <select aria-label="Sprache" value={s.language ?? "de"} onChange={e => { const language=e.currentTarget.value as "de"|"en"; void change(w=>{w.language=language}) }}><option value="de">Deutsch</option><option value="en">English</option></select>
-            <h3>Kartenfunktionen</h3><p className="muted">Deaktivierte Funktionen werden ausgeblendet. Inhalte bleiben gespeichert.</p>
+            <h3>{tr("Sprache")}</h3>
+            <div className="language-select"><span>{s.language === "en" ? "🇬🇧" : "🇩🇪"}</span><select aria-label={tr("Sprache")} value={s.language ?? "de"} onChange={e => { const language=e.currentTarget.value as "de"|"en"; void change(w=>{w.language=language}) }}><option value="de">Deutsch</option><option value="en">English</option></select></div>
+            <h3>{tr("Kartenfunktionen")}</h3><p className="muted">Deaktivierte Funktionen werden ausgeblendet. Inhalte bleiben gespeichert.</p>
             <div className="feature-switches">{(Object.keys(cardFeatureNames) as CardFeature[]).map(key=><label key={key} className="check-label"><input type="checkbox" checked={featureEnabled(s,key)} onChange={e=>{const enabled=e.currentTarget.checked;void change(w=>{w.cardFeatures={...w.cardFeatures,[key]:enabled}})}} /> {cardFeatureNames[key]}</label>)}</div>
-            <h3>Darstellung</h3>
+            <h3>{tr("Darstellung")}</h3>
             <label className="check-label">
               <input
                 type="checkbox"
                 checked={s.showImages !== false}
                 onChange={(e) => { const showImages=e.currentTarget.checked; void change((w) => { w.showImages = showImages; }) }}
               />{" "}
-              Bilder auf Karten anzeigen
+              {tr("Bilder auf Karten anzeigen")}
             </label>
             <button onClick={focus.testSound}>Timer-Signalton testen</button>
             <p className="muted">

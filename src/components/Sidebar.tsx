@@ -9,6 +9,7 @@ import {
   Folder,
 } from "lucide-react";
 import type { Project } from "../domain/model";
+import { tr } from "../i18n";
 export function Sidebar({
   collapsed,
   toggle,
@@ -68,41 +69,41 @@ export function Sidebar({
         ) : (
           <>
             <PanelLeftClose size={17} />
-            <span>Mehr Platz fürs Board</span>
+          <span>{tr("Mehr Platz fürs Board")}</span>
           </>
         )}
       </button>
-      <div className="workspace-label sidebar-label">DEIN ARBEITSPLATZ</div>
+      <div className="workspace-label sidebar-label">{tr("DEIN ARBEITSPLATZ")}</div>
       <nav aria-label="Hauptnavigation">
         <button
-          aria-label="Projekte"
-          title="Projekte"
+          aria-label={tr("Projekte")}
+          title={tr("Projekte")}
           className={page === "projects" ? "nav active" : "nav"}
           onClick={() => navigate("projects")}
         >
           <LayoutGrid size={17} />
-          <span className="sidebar-label">Projekte</span>
+          <span className="sidebar-label">{tr("Projekte")}</span>
         </button>
-        <button className="nav" aria-label="Archiv" title="Archiv" onClick={archive}>
-          <Folder size={17} /><span className="sidebar-label">Archiv</span>
+        <button className="nav" aria-label={tr("Archiv")} title={tr("Archiv")} onClick={archive}>
+          <Folder size={17} /><span className="sidebar-label">{tr("Archiv")}</span>
         </button>
         <button
-          aria-label="Suche"
-          title="Suche"
+          aria-label={tr("Suche")}
+          title={tr("Suche")}
           className={page === "search" ? "nav active" : "nav"}
           onClick={() => navigate("search")}
         >
           <Search size={17} />
-          <span className="sidebar-label">Suche</span>
+          <span className="sidebar-label">{tr("Suche")}</span>
         </button>
       </nav>
       <div className="section-label">
         <span className="sidebar-label">
-          Projekte <small>{projects.length}</small>
+          {tr("Projekte")} <small>{projects.length}</small>
         </span>
         <button
-          aria-label="Neues Projekt"
-          title="Neues Projekt"
+          aria-label={tr("Neues Projekt")}
+          title={tr("Neues Projekt")}
           onClick={newProject}
         >
           <Plus size={16} />
@@ -138,17 +139,17 @@ export function Sidebar({
         </div>
         <button
           className="nav"
-          aria-label="Einstellungen"
-          title="Einstellungen"
+          aria-label={tr("Einstellungen")}
+          title={tr("Einstellungen")}
           onClick={settings}
         >
           <Settings size={17} />
-          <span className="sidebar-label">Einstellungen</span>
+          <span className="sidebar-label">{tr("Einstellungen")}</span>
         </button>
         <button className="profile" onClick={profile}>
           {user.avatar ? <img src={user.avatar} alt="" /> : <span>{user.name.slice(0,1)}</span>}
           <div className="sidebar-label">
-            {user.name}<small>Mein Profil</small>
+            {user.name}<small>{tr("Mein Profil")}</small>
           </div>
         </button>
       </div>
